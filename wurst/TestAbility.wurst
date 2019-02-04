@@ -1,0 +1,35 @@
+package TestAbility
+
+import AbilityObjEditing
+import ObjectIdGenerator
+import RegisterEvents
+import Missile
+import Assets
+
+
+public let TESTABILITY = compiletime( ABIL_ID_GEN.next() )
+
+
+init
+    registerSpellEffectEvent( TESTABILITY ) ->
+        let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
+        let origin = GetSpellAbilityUnit().getPos3with(100)
+        new Missile( target, origin, Abilities.arrowMissile1, 500,  0.5 )
+
+
+@compiletime
+function createAbility()
+    
+    new AbilityDefinitionCarrionSwarmcreep( TESTABILITY )
+    ..setAnimationNames("attack")
+    ..setMissileArt("")
+    ..setTargetsAllowed(1, "none")
+    ..setCastRange(1, 10000)
+    ..setDistance(1, 0)
+    ..setManaCost(1, 0)
+    ..setCooldown(1, 0)
+    ..setName("Missile")
+    ..setTooltipNormal(1, "Missile")
+    ..setIconNormal(Icons.bTNClusterRockets)
+
+
