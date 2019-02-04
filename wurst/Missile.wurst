@@ -1,9 +1,13 @@
 package Missile
+import TimerUtils
 
 // Homing
 // Adjust to beginning height and end height
 // Create pitch etc.
 // Add pointing
+
+
+
 
 
 public interface MissileAction
@@ -12,7 +16,9 @@ public interface MissileAction
 
 public class Missile
 
+
     private static let UPDATEFREQ = 0.01
+    private static let GRAVITY = -9.82 * UPDATEFREQ
 
     private angle direction
 
@@ -20,32 +26,56 @@ public class Missile
 
     private vec3 velocity
 
+    private effect missileSfx
+
+    private timer updateTimer
+
 
     construct( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
-        /*
-            Vx = Vo * cos(a)
-
-            Vy = Vo * sin(a)
-
-            Vo = Vx / cos(a)
-
-            
-            Vy = (Vx / cos(a)) * sin(a)
-
-            formlen til den lodrette acceleration
 
 
-        */
-
-
-
-        
+        let distance = originPos.distanceTo(targetPos)
+    
         let direction = originPos.angleTo2d(targetPos).radians()
         let actualSpeed = speed * UPDATEFREQ
 
+        print(actualSpeed)
+        print(distance)
+
+
         velocity = vec3( actualSpeed * Cos(direction),
                          actualSpeed * Sin(direction),
-                         actualSpeed * Sin( PIHALF * arc )     )
+                         SquareRoot( ((-GRAVITY*distance)/(Sin(2*arc)) - actualSpeed*actualSpeed).abs() )
+                              )
+
+
+        print(velocity.toString())
+
+        pos = originPos
+
+        missileSfx = addEffect( sfx, pos )
+
+        // Timer
+        updateTimer = getTimer()
+        ..setData( this castTo int )
+        ..startPeriodic( UPDATEFREQ, () -> GetExpiredTimer().getData() castTo thistype.update() ) 
+
+
+
+    ondestroy
+        updateTimer.release()
+        missileSfx.destr()
+
+    function update()
+
+        velocity.z += GRAVITY
+
+        pos += velocity
+
+        missileSfx.setPos(pos)
+
+        if pos.z < 0
+            destroy this
 
         
 
@@ -54,6 +84,8 @@ public class Missile
 
     function addEndAction( MissileAction action )
 
+
+    
  
     function getPos() returns vec2
         return pos.toVec2()

@@ -9,10 +9,3 @@ let UNIT = createUnit( Player(0), 'hfoo', vec2(0,0), angle(0) )
 
 init
     UNIT.addAbility( TESTABILITY )
-
-
-
-@compiletime
-function createAbilities()
-
-    

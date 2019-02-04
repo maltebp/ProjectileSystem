@@ -13,8 +13,8 @@ public let TESTABILITY = compiletime( ABIL_ID_GEN.next() )
 init
     registerSpellEffectEvent( TESTABILITY ) ->
         let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
-        let origin = GetSpellAbilityUnit().getPos3with(100)
-        new Missile( target, origin, Abilities.arrowMissile1, 500,  0.5 )
+        let origin = GetSpellAbilityUnit().getPos3with(0)
+        new Missile( origin, target, Abilities.bloodElfMissile, 500,  1 )
 
 
 @compiletime
