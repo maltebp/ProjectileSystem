@@ -5,22 +5,34 @@ import ObjectIdGenerator
 import RegisterEvents
 import Missile
 import Assets
+import CustomProjectile
+import MyMissile
 
 
-public let TESTABILITY = compiletime( ABIL_ID_GEN.next() )
+public let TESTABILITY_POINT = compiletime( ABIL_ID_GEN.next() )
+public let TESTABILITY_UNIT = compiletime( ABIL_ID_GEN.next() )
 
 
 init
-    registerSpellEffectEvent( TESTABILITY ) ->
+    registerSpellEffectEvent( TESTABILITY_POINT ) ->
         let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
         let origin = GetSpellAbilityUnit().getPos3with(0)
+        
+        //new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
         new Missile( origin, target, Abilities.bloodElfMissile, 500,  1 )
+
+    registerSpellEffectEvent( TESTABILITY_UNIT ) ->
+        let target = GetSpellTargetUnit()
+        let origin = GetSpellAbilityUnit().getPos3with(0)
+        
+        new MyMissile( origin, target, 500, 1500, Abilities.bloodElfMissile )
+        //new Missile( origin, target, Abilities.bloodElfMissile, 500,  1 )
 
 
 @compiletime
 function createAbility()
     
-    new AbilityDefinitionCarrionSwarmcreep( TESTABILITY )
+    new AbilityDefinitionCarrionSwarmcreep( TESTABILITY_POINT )
     ..setAnimationNames("attack")
     ..setMissileArt("")
     ..setTargetsAllowed(1, "none")
@@ -31,5 +43,21 @@ function createAbility()
     ..setName("Missile")
     ..setTooltipNormal(1, "Missile")
     ..setIconNormal(Icons.bTNClusterRockets)
+
+    new AbilityDefinitionFingerofDeath(TESTABILITY_UNIT)
+    ..setHeroAbility(false)
+    ..setArtTarget("")
+    ..setLightningEffects("")
+    ..setAnimationNames("attack")
+    ..setMissileArt("")
+    ..setTargetsAllowed(1, "ground,hero")
+    ..setCastRange(1, 10000)
+    ..setManaCost(1, 0)
+    ..setCooldown(1, 0)
+    ..setName("Missile")
+    ..setTooltipNormal(1, "Missile")
+    ..setDamage(1, 0)
+    ..setIconNormal(Icons.bTNClusterRockets)
+
 
 

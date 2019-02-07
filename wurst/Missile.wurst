@@ -41,13 +41,19 @@ public class Missile
 
         print(actualSpeed)
         print(distance)
-
+        
 
         velocity = vec3( actualSpeed * Cos(direction),
                          actualSpeed * Sin(direction),
-                         SquareRoot( ((-GRAVITY*distance)/(Sin(2*arc)) - actualSpeed*actualSpeed).abs() )
-                              )
 
+                         Tan(arc)*actualSpeed
+        )   
+                         
+                         //SquareRoot( (-GRAVITY*distance)/(Sin(2*arc))) - actualSpeed
+                              
+
+                        
+                              
 
         print(velocity.toString())
 
