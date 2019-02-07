@@ -16,10 +16,10 @@ public let TESTABILITY_UNIT = compiletime( ABIL_ID_GEN.next() )
 init
     registerSpellEffectEvent( TESTABILITY_POINT ) ->
         let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
-        let origin = GetSpellAbilityUnit().getPos3with(0)
+        let origin = GetSpellAbilityUnit().getPos3Real()
         
-        //new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
-        new Missile( origin, target, Abilities.bloodElfMissile, 500,  1 )
+        new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
+        //new Missile( origin, target, Abilities.bloodElfMissile, 500,  1.3 )
 
     registerSpellEffectEvent( TESTABILITY_UNIT ) ->
         let target = GetSpellTargetUnit()
@@ -50,7 +50,7 @@ function createAbility()
     ..setLightningEffects("")
     ..setAnimationNames("attack")
     ..setMissileArt("")
-    ..setTargetsAllowed(1, "ground,hero")
+    ..setTargetsAllowed(1, "ground,hero,nonhero")
     ..setCastRange(1, 10000)
     ..setManaCost(1, 0)
     ..setCooldown(1, 0)

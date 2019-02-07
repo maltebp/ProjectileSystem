@@ -1,5 +1,7 @@
 package Missile
 import TimerUtils
+import Assets
+import ClosureTimers
 
 // Homing
 // Adjust to beginning height and end height
@@ -32,29 +34,43 @@ public class Missile
 
     private timer updateTimer
 
+    private real targetZ
+
 
     construct( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
 
 
         let distance = originPos.distanceTo(targetPos)
-    
+        let heightDif =  targetPos.z - originPos.z
         let direction = originPos.angleTo2d(targetPos).radians()
-        let actualSpeed = speed * UPDATEFREQ
 
-        print(actualSpeed)
-        print(distance)
+        let time = distance / speed
+
+        targetZ = targetPos.z
+
+        print("height dif: "+heightDif.toString(3))
+        print("time: "+time.toString())
         
 
-        velocity = vec3( actualSpeed * Cos(direction),
-                         actualSpeed * Sin(direction),
+        velocity = vec3( Cos(direction) * speed,
+                         Sin(direction) * speed,
 
-                         Tan(arc)*actualSpeed
+                         Tan(arc) * speed
         )   
                          
                          //SquareRoot( (-GRAVITY*distance)/(Sin(2*arc))) - actualSpeed
-                              
+                           
 
-        gravity = (Sin(2*arc) * velocity.length()*velocity.length()) / distance
+
+        gravity =  (2 / time) * (heightDif / time - velocity.z)
+
+        
+
+        print("Gravity: "+gravity.toString(5))
+        
+        //(2*heightDif + 2*velocity.z * time ) / (time*time)
+        
+        //(Sin(2*arc) * velocity.length()*velocity.length()) / distance
                               
         
         print(velocity.toString())
@@ -76,19 +92,23 @@ public class Missile
 
     function update()
 
-        velocity.z -= gravity
+        velocity.z += gravity*UPDATEFREQ
 
-        pos += velocity
+        pos += velocity*UPDATEFREQ
 
         missileSfx.setPos(pos)
 
-        if pos.z < 0
+        if pos.z < targetZ
+
+            let sfx = addEffect(Objects.battleStandard, pos)
+            doAfter(2) ->
+                sfx.destr()
+
             destroy this
 
         
 
     function addPeriodicAction(  )
-
 
     function addEndAction( MissileAction action )
 
