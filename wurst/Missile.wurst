@@ -3,13 +3,6 @@ import TimerUtils
 import Assets
 import ClosureTimers
 
-// Homing
-// Adjust to beginning height and end height
-// Create pitch etc.
-// Add pointing
-
-
-
 
 
 public interface MissileAction
@@ -19,10 +12,7 @@ public interface MissileAction
 public class Missile
 
 
-    private static let UPDATEFREQ = 0.01
-    private static let GRAVITY = -9.82 * UPDATEFREQ
-
-    private angle direction
+    private static let UPDATEFREQ = ANIMATION_PERIOD//ANIMATION_PERIOD
 
     private vec3 pos
 
@@ -36,34 +26,32 @@ public class Missile
 
     private real targetZ
 
+    private vec3 targetPos 
+    
+    private real speed
+
 
     construct( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
 
+        this.targetPos = targetPos
 
         let distance = originPos.distanceTo(targetPos)
         let heightDif =  targetPos.z - originPos.z
         let direction = originPos.angleTo2d(targetPos).radians()
 
-        let time = distance / speed
+        let adjustedSpeed = speed * UPDATEFREQ
 
+        let time = distance / adjustedSpeed
+
+        this.speed = adjustedSpeed
         targetZ = targetPos.z
 
-        print("height dif: "+heightDif.toString(3))
-        print("time: "+time.toString())
-        
-
-        velocity = vec3( Cos(direction) * speed,
-                         Sin(direction) * speed,
-
-                         Tan(arc) * speed
-        )   
-                         
-                         //SquareRoot( (-GRAVITY*distance)/(Sin(2*arc))) - actualSpeed
-                           
-
+        velocity = vec3( Cos(direction) * adjustedSpeed,
+                         Sin(direction) * adjustedSpeed,
+                         Tan(arc) * adjustedSpeed
+        )
 
         gravity =  (2 / time) * (heightDif / time - velocity.z)
-
         
 
         print("Gravity: "+gravity.toString(5))
@@ -90,25 +78,36 @@ public class Missile
         updateTimer.release()
         missileSfx.destr()
 
+
     function update()
 
-        velocity.z += gravity*UPDATEFREQ
+        let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
 
-        pos += velocity*UPDATEFREQ
-
-        missileSfx.setPos(pos)
-
-        if pos.z < targetZ
-
-            let sfx = addEffect(Objects.battleStandard, pos)
-            doAfter(2) ->
-                sfx.destr()
+        if speed >= remainingDistance
 
             destroy this
+            return
+
+        else
+            let heightDif =  targetPos.z - pos.z
+            let time = remainingDistance / speed
+            let gravity = (2 / time) * (heightDif / time - velocity.z)
+
+            velocity.z += gravity
+            pos += velocity
+
+            missileSfx.setPos(pos)
+
+
+        
+
+        
 
         
 
     function addPeriodicAction(  )
+
+
 
     function addEndAction( MissileAction action )
 

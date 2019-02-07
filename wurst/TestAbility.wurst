@@ -18,8 +18,8 @@ init
         let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
         let origin = GetSpellAbilityUnit().getPos3Real()
         
-        new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
-        //new Missile( origin, target, Abilities.bloodElfMissile, 500,  1.3 )
+        //new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
+        new Missile( origin, target, Abilities.bloodElfMissile, 500, 1 )
 
     registerSpellEffectEvent( TESTABILITY_UNIT ) ->
         let target = GetSpellTargetUnit()
