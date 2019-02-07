@@ -26,6 +26,8 @@ public class Missile
 
     private vec3 velocity
 
+    private real gravity
+
     private effect missileSfx
 
     private timer updateTimer
@@ -52,9 +54,9 @@ public class Missile
                          //SquareRoot( (-GRAVITY*distance)/(Sin(2*arc))) - actualSpeed
                               
 
-                        
+        gravity = (Sin(2*arc) * velocity.length()*velocity.length()) / distance
                               
-
+        
         print(velocity.toString())
 
         pos = originPos
@@ -74,7 +76,7 @@ public class Missile
 
     function update()
 
-        velocity.z += GRAVITY
+        velocity.z -= gravity
 
         pos += velocity
 
