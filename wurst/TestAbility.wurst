@@ -26,8 +26,7 @@ init
         let target = GetSpellTargetUnit()
         let origin = GetSpellAbilityUnit().getPos3with(0)
         
-        new MyMissile( origin, target, 500, 1500, Abilities.mortarMissile )
-        //new Missile( origin, target, Abilities.bloodElfMissile, 500,  1 )
+        let missile = new Missile( target, origin, Abilities.wyvernSpearMissile, 500, 1 )
 
 
 @compiletime

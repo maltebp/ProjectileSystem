@@ -5,11 +5,29 @@ import ClosureTimers
 
 
     
+    /*
+
+        ProjectileTypes:
+            - Unit Target
+            - Unit Homing
+            - Position
+
+        Detections:
+            - On hit (unit, position etc)
+            - On Collision (perhaps using a filter function?)
+
+    */
+
+
+
 
 public interface MissileAction
     function run()
 
 
+
+public interface CollisionFilter
+    function filter( unit filterUnit ) returns boolean
 
 
 public class Missile
@@ -22,7 +40,7 @@ public class Missile
 
     private real gravity
 
-    private effect missileSfx
+    protected effect missileSfx
 
     private timer updateTimer
 
@@ -31,10 +49,15 @@ public class Missile
     private vec3 targetPos 
     
     private real speed
+    
+    private CollisionFilter collisionFilter = null
 
     private MissileAction action_OnFinish = null
 
     private real direction
+
+    private unit targetUnit = null
+
 
     construct( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
 
@@ -80,14 +103,56 @@ public class Missile
 
 
 
+    construct( unit targetUnit, vec3 originPos, string sfx, real speed, real arc  )
+
+        this.targetUnit = targetUnit
+        this.targetPos = targetUnit.getPos3Real()
+
+        let distance = originPos.distanceTo(targetPos)
+        let heightDif =  targetPos.z - originPos.z
+        this.direction = originPos.angleTo2d(targetPos).radians()
+
+        let adjustedSpeed = speed * UPDATEFREQ
+
+        let time = distance / adjustedSpeed
+
+        this.speed = adjustedSpeed
+        targetZ = targetPos.z
+
+        velocity = vec3( Cos(direction) * adjustedSpeed,
+                         Sin(direction) * adjustedSpeed,
+                         Tan(arc) * adjustedSpeed
+        )
+
+        gravity =  (2 / time) * (heightDif / time - velocity.z)
+        
+                              
+        print(velocity.toString())
+
+        pos = originPos
+
+        missileSfx = addEffect( sfx, pos )
+        ..setRoll(direction)
+
+        // Timer
+        updateTimer = getTimer()
+        ..setData( this castTo int )
+        ..startPeriodic( UPDATEFREQ, () -> GetExpiredTimer().getData() castTo thistype.update() ) 
+
+
+
     ondestroy
 
         updateTimer.release()
         missileSfx.destr()
-
+        
 
 
     function update()
+
+        if targetUnit != null
+            targetPos = targetUnit.getPos().withTerrainZ()
+            direction = pos.angleTo2d(targetPos).radians()
 
 
         let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
@@ -103,25 +168,32 @@ public class Missile
             return
 
         else
+    
+
             let heightDif =  targetPos.z - pos.z
             let time = remainingDistance / speed
             let gravity = (2 / time) * (heightDif / time - velocity.z)
 
+            velocity.x = Cos(direction) * speed
+            velocity.y = Sin(direction) * speed
+
             velocity.z += gravity
+
             pos += velocity
 
             missileSfx.setPos(pos)
-
 
             let angle = Atan( velocity.z / speed )
 
             print(direction)
 
+            missileSfx.setRoll(direction)
             missileSfx.setPitch(-angle*Cos(direction))// * Sin(direction))
             missileSfx.setYaw(angle*Sin(direction))//) * )
 
 
 
+        //if collisionFilter.filter( unit u )
 
         
     function addPeriodicAction(  )
