@@ -19,13 +19,14 @@ init
         let origin = GetSpellAbilityUnit().getPos3Real()
         
         //new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
-        new Missile( origin, target, Abilities.bloodElfMissile, 500, 1 )
+        let missile = new Missile( origin, target, Abilities.wyvernSpearMissile, 500, 1 )
+
 
     registerSpellEffectEvent( TESTABILITY_UNIT ) ->
         let target = GetSpellTargetUnit()
         let origin = GetSpellAbilityUnit().getPos3with(0)
         
-        new MyMissile( origin, target, 500, 1500, Abilities.bloodElfMissile )
+        new MyMissile( origin, target, 500, 1500, Abilities.mortarMissile )
         //new Missile( origin, target, Abilities.bloodElfMissile, 500,  1 )
 
 

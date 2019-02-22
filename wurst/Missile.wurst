@@ -4,15 +4,17 @@ import Assets
 import ClosureTimers
 
 
+    
 
 public interface MissileAction
     function run()
 
 
+
+
 public class Missile
 
-
-    private static let UPDATEFREQ = ANIMATION_PERIOD//ANIMATION_PERIOD
+    private static let UPDATEFREQ = ANIMATION_PERIOD //ANIMATION_PERIOD
 
     private vec3 pos
 
@@ -30,6 +32,9 @@ public class Missile
     
     private real speed
 
+    private MissileAction action_OnFinish = null
+
+    private real direction
 
     construct( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
 
@@ -37,7 +42,7 @@ public class Missile
 
         let distance = originPos.distanceTo(targetPos)
         let heightDif =  targetPos.z - originPos.z
-        let direction = originPos.angleTo2d(targetPos).radians()
+        this.direction = originPos.angleTo2d(targetPos).radians()
 
         let adjustedSpeed = speed * UPDATEFREQ
 
@@ -66,6 +71,7 @@ public class Missile
         pos = originPos
 
         missileSfx = addEffect( sfx, pos )
+        ..setRoll(direction)
 
         // Timer
         updateTimer = getTimer()
@@ -75,15 +81,23 @@ public class Missile
 
 
     ondestroy
+
         updateTimer.release()
         missileSfx.destr()
 
 
+
     function update()
+
 
         let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
 
         if speed >= remainingDistance
+            
+            if action_OnFinish != null
+
+                action_OnFinish.run()
+
 
             destroy this
             return
@@ -99,26 +113,37 @@ public class Missile
             missileSfx.setPos(pos)
 
 
-        
+            let angle = Atan( velocity.z / speed )
+
+            print(direction)
+
+            missileSfx.setPitch(-angle*Cos(direction))// * Sin(direction))
+            missileSfx.setYaw(angle*Sin(direction))//) * )
+
+
+
 
         
-
-        
-
     function addPeriodicAction(  )
 
 
+    function onUnitCollision()
 
-    function addEndAction( MissileAction action )
+
+    function addActionOnCollision( boolean multipleCollisions, MissileAction action )      
+        // Also activates collision detection
 
 
-    
+    function addOnFinishAction( MissileAction action )
+        action_OnFinish = action
+
+        
  
     function getPos() returns vec2
         return pos.toVec2()
 
-    function getPos3() returns vec3
-        return pos
+    // function getPos3() returns vec3
+    //     return pos
 
 
 

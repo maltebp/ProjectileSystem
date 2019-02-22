@@ -1,5 +1,6 @@
 package Main
 import TestAbility
+import Missile
 
 
 
@@ -12,3 +13,5 @@ init
     UNIT
     ..addAbility( TESTABILITY_POINT )
     ..addAbility( TESTABILITY_UNIT )
+
+    
