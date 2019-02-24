@@ -14,4 +14,12 @@ init
     ..addAbility( TESTABILITY_POINT )
     ..addAbility( TESTABILITY_UNIT )
 
-    
+
+    let xMax = 500.
+    let xMin = -500.
+    let yMax = 500.
+    let yMin = -500.
+
+    for i=0 to 20
+        let pos = vec2( GetRandomReal(xMin, xMax), GetRandomReal(yMin, yMax))
+        createUnit( Player(0), 'hfoo', pos, angle(0) )

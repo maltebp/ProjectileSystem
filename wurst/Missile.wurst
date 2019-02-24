@@ -1,10 +1,6 @@
 package Missile
 import TimerUtils
-import Assets
-import ClosureTimers
 
-
-    
     /*
 
         ProjectileTypes:
@@ -19,10 +15,12 @@ import ClosureTimers
     */
 
 
-
-
 public interface MissileAction
     function run()
+
+
+public interface MissileUnitAction
+    function run(unit target)
 
 
 
@@ -44,13 +42,21 @@ public class Missile
 
     private timer updateTimer
 
-    private real targetZ
-
     private vec3 targetPos 
     
     private real speed
     
     private CollisionFilter collisionFilter = null
+    
+    private real collisionRange = 0
+
+    private boolean collisionEnabled = false
+
+    private boolean collideOnce = false
+
+    private group collidedUnits = null
+
+    private MissileUnitAction action_OnCollision = null
 
     private MissileAction action_OnFinish = null
 
@@ -58,10 +64,22 @@ public class Missile
 
     private unit targetUnit = null
 
+    private real zOffset = 0 // only used with unit target
+
+    private boolean homing = false
+
+    private real distanceToTravel = 0 // It will travel exactly this distanceToTravel
+
+    private vec3 originPos
+
+    
+    
+
 
     construct( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
 
         this.targetPos = targetPos
+        this.originPos = originPos
 
         let distance = originPos.distanceTo(targetPos)
         let heightDif =  targetPos.z - originPos.z
@@ -69,10 +87,10 @@ public class Missile
 
         let adjustedSpeed = speed * UPDATEFREQ
 
-        let time = distance / adjustedSpeed
+        let time = distance
+         / adjustedSpeed
 
         this.speed = adjustedSpeed
-        targetZ = targetPos.z
 
         velocity = vec3( Cos(direction) * adjustedSpeed,
                          Sin(direction) * adjustedSpeed,
@@ -86,7 +104,8 @@ public class Missile
         
         //(2*heightDif + 2*velocity.z * time ) / (time*time)
         
-        //(Sin(2*arc) * velocity.length()*velocity.length()) / distance
+        //(Sin(2*arc) * velocity.length()*velocity.length()) / distanceToTravel
+
                               
         
         print(velocity.toString())
@@ -102,36 +121,28 @@ public class Missile
         ..startPeriodic( UPDATEFREQ, () -> GetExpiredTimer().getData() castTo thistype.update() ) 
 
 
-
-    construct( unit targetUnit, vec3 originPos, string sfx, real speed, real arc  )
+    
+    // Will always hit
+    construct( unit targetUnit, real zOffset, vec3 originPos, boolean homing, string sfxPath, real speed, real arc  )
 
         this.targetUnit = targetUnit
-        this.targetPos = targetUnit.getPos3Real()
+        this.targetPos = targetUnit.getPos3with(zOffset)
+        this.homing = homing
+        this.originPos = originPos
 
-        let distance = originPos.distanceTo(targetPos)
-        let heightDif =  targetPos.z - originPos.z
+        this.speed = speed * ANIMATION_PERIOD
+        this.zOffset = zOffset
+
         this.direction = originPos.angleTo2d(targetPos).radians()
-
-        let adjustedSpeed = speed * UPDATEFREQ
-
-        let time = distance / adjustedSpeed
-
-        this.speed = adjustedSpeed
-        targetZ = targetPos.z
-
-        velocity = vec3( Cos(direction) * adjustedSpeed,
-                         Sin(direction) * adjustedSpeed,
-                         Tan(arc) * adjustedSpeed
-        )
-
-        gravity =  (2 / time) * (heightDif / time - velocity.z)
         
-                              
-        print(velocity.toString())
-
+        velocity = vec3( Cos(direction) * this.speed,
+                         Sin(direction) * this.speed,
+                         Tan(arc) * this.speed
+        )
+        
         pos = originPos
 
-        missileSfx = addEffect( sfx, pos )
+        missileSfx = addEffect( sfxPath, pos )
         ..setRoll(direction)
 
         // Timer
@@ -150,12 +161,24 @@ public class Missile
 
     function update()
 
-        if targetUnit != null
-            targetPos = targetUnit.getPos().withTerrainZ()
+        if homing and targetUnit != null
+            targetPos = targetUnit.getPos3with(zOffset)
             direction = pos.angleTo2d(targetPos).radians()
+        
+            velocity.x = Cos(direction) * speed
+            velocity.y = Sin(direction) * speed
+
+            missileSfx.setRoll(direction)
 
 
-        let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
+        real remainingDistance
+        
+
+        if distanceToTravel > 0
+            remainingDistance = distanceToTravel - pos.distanceTo2d(originPos.toVec2()) 
+        else
+            remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
+
 
         if speed >= remainingDistance
             
@@ -168,47 +191,59 @@ public class Missile
             return
 
         else
-    
-
             let heightDif =  targetPos.z - pos.z
             let time = remainingDistance / speed
             let gravity = (2 / time) * (heightDif / time - velocity.z)
 
-            velocity.x = Cos(direction) * speed
-            velocity.y = Sin(direction) * speed
-
             velocity.z += gravity
-
             pos += velocity
 
             missileSfx.setPos(pos)
 
             let angle = Atan( velocity.z / speed )
-
-            print(direction)
-
-            missileSfx.setRoll(direction)
+            
             missileSfx.setPitch(-angle*Cos(direction))// * Sin(direction))
             missileSfx.setYaw(angle*Sin(direction))//) * )
 
+            // Target collision
+            if collisionEnabled
+                let targets = ENUM_GROUP..enumUnitsInRange( pos.toVec2(), collisionRange )
+                
+                for target from targets
 
+                    if (not collideOnce or not collidedUnits.contains(target)) and (collisionFilter == null or collisionFilter.filter(target))
+                        onUnitCollision()
+                        action_OnCollision.run(target)
+                        collidedUnits.addUnit(target)
+            
 
-        //if collisionFilter.filter( unit u )
+    function onUpdate()
+        
 
         
-    function addPeriodicAction(  )
+    function addPeriodicAction()
 
 
     function onUnitCollision()
 
 
-    function addActionOnCollision( boolean multipleCollisions, MissileAction action )      
-        // Also activates collision detection
+    function addCollisionAction( real range, boolean is3d, boolean collideOnce, CollisionFilter filter, MissileUnitAction action )      
+        
+        collisionEnabled = true
+        collisionRange = range
+        this.collideOnce = collideOnce
+        action_OnCollision = action
+
+        if collideOnce
+            collidedUnits = CreateGroup()
+
+
+
+    function addCollisionFilter(  )
 
 
     function addOnFinishAction( MissileAction action )
         action_OnFinish = action
-
         
  
     function getPos() returns vec2
@@ -216,7 +251,5 @@ public class Missile
 
     // function getPos3() returns vec3
     //     return pos
-
-
 
 

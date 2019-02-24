@@ -20,9 +20,9 @@ function setPitch()
 
 init
 
-    sfx = addEffect( Abilities.wyvernSpearMissile, vec2(0,0))
-    ..setHeight(150)
-    ..setScale(1.5)
+    // sfx = addEffect( Abilities.wyvernSpearMissile, vec2(0,0))
+    // ..setHeight(150)
+    // ..setScale(1.5)
 
     CreateTrigger()
     ..registerPlayerChatEvent(Player(0), "set ", false)
