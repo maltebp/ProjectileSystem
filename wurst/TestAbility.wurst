@@ -23,7 +23,7 @@ init
 
         //new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
         let missile = new Missile( origin, target, Abilities.wyvernSpearMissile, 500, 0 )
-        ..addCollisionAction(200, false, true, null) u ->
+        ..addCollisionAction(200, true, null) u ->
             flashEffect( Abilities.zigguratMissile, u, "chest")
             caster.damageTarget(u, 50)
         

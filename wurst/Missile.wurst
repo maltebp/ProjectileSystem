@@ -30,16 +30,11 @@ public class Missile
 
     use TimedLoop
 
-    private static let UPDATEFREQ = ANIMATION_PERIOD //ANIMATION_PERIOD
 
     private vec3 pos
-
     private vec3 velocity
 
-    private real gravity
-
     protected effect missileSfx
-
 
     private vec3 targetPos 
     
@@ -63,8 +58,6 @@ public class Missile
 
     private unit targetUnit = null
 
-    private real zOffset = 0 // only used with unit target
-
 
     private real distanceToTravel = 0 // It will travel exactly this distanceToTravel
 
@@ -74,10 +67,11 @@ public class Missile
     protected MissileAction action_postUpdate = null
 
 
+    /** Generic point */
     construct( vec3 originPos, vec3 targetPos, string sfxPath, real speed, real arc )
         initialize(originPos, targetPos, sfxPath, speed, arc)
-
     
+
     /** Target = unit */
     construct( unit targetUnit, real targetZOffset, vec3 originPos, boolean homing, string sfxPath, real speed, real arc  )
         initialize(originPos, targetPos, sfxPath, speed, arc)
@@ -118,35 +112,19 @@ public class Missile
 
         
         missileSfx.destr()
-            
+        
+
 
     override function onTimedLoop()
-        update()
-
-    function postUpdate()
-
-
-    function update()
 
         if action_preUpdate != null
             action_preUpdate.run()
-
-
-        real remainingDistance
         
-
-        if distanceToTravel > 0
-            remainingDistance = distanceToTravel - pos.distanceTo2d(originPos.toVec2()) 
-        else
-            remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
-
+        let remainingDistance = (distanceToTravel > 0 ) ? distanceToTravel - pos.distanceTo2d(originPos.toVec2()) : pos.toVec2().distanceTo(targetPos.toVec2())
 
         if speed >= remainingDistance
-            
             if action_OnFinish != null
-
                 action_OnFinish.run()
-
 
             destroy this
             return
@@ -166,19 +144,13 @@ public class Missile
             missileSfx.setPitch(-angle*Cos(direction))// * Sin(direction))
             missileSfx.setYaw(angle*Sin(direction))//) * )
 
-            // Target collision
-            if collisionEnabled
-                let targets = ENUM_GROUP..enumUnitsInRange( pos.toVec2(), collisionRange )
-                
-                for target from targets
 
-                    if (not collideOnce or not collidedUnits.contains(target)) and (collisionFilter == null or collisionFilter.filter(target))
-                        onUnitCollision()
-                        action_OnCollision.run(target)
-                        collidedUnits.addUnit(target)
+        if action_postUpdate != null
+            action_postUpdate.run()
+
+
+        
             
-
-
 
         
     function addPeriodicAction( real time )
@@ -187,19 +159,21 @@ public class Missile
     function addPeriodicActionCounted( real time, int counts )
 
 
-    function onUnitCollision()
-
-
-    function addCollisionAction( real range, boolean is3d, boolean collideOnce, ProjectileFilter filter, MissileUnitAction action )      
+    function addCollisionAction( real range, boolean collideOnce, ProjectileFilter filter, MissileUnitAction action )      
         
-        collisionEnabled = true
-        collisionRange = range
-        this.collideOnce = collideOnce
-        action_OnCollision = action
+        let collidedTargets = CreateGroup()
 
-        if collideOnce
-            collidedUnits = CreateGroup()
+        action_postUpdate = ->
+            let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
+                    
+            for target from targets
 
+                if (not collideOnce or not collidedTargets.contains(target)) and (this.collisionFilter == null or this.collisionFilter.filter(target))
+                    action.run(target)
+                    collidedTargets.addUnit(target)
+
+        action_OnFinish = ->
+            collidedTargets.destr()
 
 
     function addCollisionFilter(  )
@@ -214,11 +188,3 @@ public class Missile
  
     function getPos() returns vec2
         return pos.toVec2()
-
-    /** Sets the distance for the missile to travel. If not destroyed, it will travel exactly this distance. */
-    function setDistance( real distance )
-        distanceToTravel = distance
-
-
-    // function getPos3() returns vec3
-    //     return pos
