@@ -1,5 +1,6 @@
 package Missile
 import TimerUtils
+import LinkedList
 
     /*
 
@@ -41,18 +42,10 @@ public class Missile
     private real speed
     
     private ProjectileFilter<unit> collisionFilter = null
-    
-    private real collisionRange = 0
-
-    private boolean collisionEnabled = false
-
-    private boolean collideOnce = false
-
-    private group collidedUnits = null
-
-    private MissileUnitAction action_OnCollision = null
 
     private MissileAction action_OnFinish = null
+
+    private LinkedList<MissileAction> actionsOnFinish = null
 
     private real direction
 
@@ -108,11 +101,9 @@ public class Missile
 
 
 
-    ondestroy
-
-        
+    ondestroy    
         missileSfx.destr()
-        
+    
 
 
     override function onTimedLoop()
@@ -123,8 +114,13 @@ public class Missile
         let remainingDistance = (distanceToTravel > 0 ) ? distanceToTravel - pos.distanceTo2d(originPos.toVec2()) : pos.toVec2().distanceTo(targetPos.toVec2())
 
         if speed >= remainingDistance
-            if action_OnFinish != null
-                action_OnFinish.run()
+
+            if actionsOnFinish != null
+                for action in actionsOnFinish
+                    action.run()
+                    destroy action
+
+            destroy actionsOnFinish
 
             destroy this
             return
@@ -149,20 +145,13 @@ public class Missile
             action_postUpdate.run()
 
 
-        
-            
-
-        
-    function addPeriodicAction( real time )
-        addPeriodicActionCounted(time, 0)
-
-    function addPeriodicActionCounted( real time, int counts )
-
 
     function addCollisionAction( real range, boolean collideOnce, ProjectileFilter filter, MissileUnitAction action )      
         
-        let collidedTargets = CreateGroup()
+        group collidedTargets = null
 
+        if collideOnce
+            collidedTargets = CreateGroup()
         action_postUpdate = ->
             let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
                     
@@ -172,8 +161,9 @@ public class Missile
                     action.run(target)
                     collidedTargets.addUnit(target)
 
-        action_OnFinish = ->
+        addActionOnFinish() ->
             collidedTargets.destr()
+            destroy action
 
 
     function addCollisionFilter(  )
@@ -182,8 +172,10 @@ public class Missile
     function addPreUpdateAction( MissileAction action )
         this.action_preUpdate = action
 
-    function addOnFinishAction( MissileAction action )
-        action_OnFinish = action
+    function addActionOnFinish( MissileAction action )
+        if actionsOnFinish == null
+            actionsOnFinish = new LinkedList<MissileAction>
+        actionsOnFinish.add(action)
         
  
     function getPos() returns vec2
