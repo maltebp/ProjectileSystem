@@ -11,7 +11,6 @@ import TimerUtils
         Detections:
             - On hit (unit, position etc)
             - On Collision (perhaps using a filter function?)
-
     */
 
 
@@ -23,12 +22,13 @@ public interface MissileUnitAction
     function run(unit target)
 
 
-
-public interface CollisionFilter
-    function filter( unit filterUnit ) returns boolean
+public interface ProjectileFilter<T>
+    function filter( T filterParam ) returns boolean
 
 
 public class Missile
+
+    use TimedLoop
 
     private static let UPDATEFREQ = ANIMATION_PERIOD //ANIMATION_PERIOD
 
@@ -40,13 +40,12 @@ public class Missile
 
     protected effect missileSfx
 
-    private timer updateTimer
 
     private vec3 targetPos 
     
     private real speed
     
-    private CollisionFilter collisionFilter = null
+    private ProjectileFilter<unit> collisionFilter = null
     
     private real collisionRange = 0
 
@@ -66,109 +65,71 @@ public class Missile
 
     private real zOffset = 0 // only used with unit target
 
-    private boolean homing = false
 
     private real distanceToTravel = 0 // It will travel exactly this distanceToTravel
 
     private vec3 originPos
 
-    
-    
+    protected MissileAction action_preUpdate = null
+    protected MissileAction action_postUpdate = null
 
 
-    construct( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
-
-        this.targetPos = targetPos
-        this.originPos = originPos
-
-        let distance = originPos.distanceTo(targetPos)
-        let heightDif =  targetPos.z - originPos.z
-        this.direction = originPos.angleTo2d(targetPos).radians()
-
-        let adjustedSpeed = speed * UPDATEFREQ
-
-        let time = distance
-         / adjustedSpeed
-
-        this.speed = adjustedSpeed
-
-        velocity = vec3( Cos(direction) * adjustedSpeed,
-                         Sin(direction) * adjustedSpeed,
-                         Tan(arc) * adjustedSpeed
-        )
-
-        gravity =  (2 / time) * (heightDif / time - velocity.z)
-        
-
-        print("Gravity: "+gravity.toString(5))
-        
-        //(2*heightDif + 2*velocity.z * time ) / (time*time)
-        
-        //(Sin(2*arc) * velocity.length()*velocity.length()) / distanceToTravel
-
-                              
-        
-        print(velocity.toString())
-
-        pos = originPos
-
-        missileSfx = addEffect( sfx, pos )
-        ..setRoll(direction)
-
-        // Timer
-        updateTimer = getTimer()
-        ..setData( this castTo int )
-        ..startPeriodic( UPDATEFREQ, () -> GetExpiredTimer().getData() castTo thistype.update() ) 
-
+    construct( vec3 originPos, vec3 targetPos, string sfxPath, real speed, real arc )
+        initialize(originPos, targetPos, sfxPath, speed, arc)
 
     
-    // Will always hit
-    construct( unit targetUnit, real zOffset, vec3 originPos, boolean homing, string sfxPath, real speed, real arc  )
+    /** Target = unit */
+    construct( unit targetUnit, real targetZOffset, vec3 originPos, boolean homing, string sfxPath, real speed, real arc  )
+        initialize(originPos, targetPos, sfxPath, speed, arc)
 
         this.targetUnit = targetUnit
-        this.targetPos = targetUnit.getPos3with(zOffset)
-        this.homing = homing
-        this.originPos = originPos
 
-        this.speed = speed * ANIMATION_PERIOD
-        this.zOffset = zOffset
+        if homing 
+            action_preUpdate = () ->
+                this.targetPos = this.targetUnit.getPos3with(targetZOffset)
+                this.direction = this.pos.angleTo2d(this.targetPos).radians()
+            
+                this.velocity.x = Cos(this.direction) * this.speed
+                this.velocity.y = Sin(this.direction) * this.speed
 
-        this.direction = originPos.angleTo2d(targetPos).radians()
+                this.missileSfx.setRoll(this.direction)
+
+
+    private function initialize( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
         
+        this.originPos = originPos
+        this.targetPos = targetPos
+        this.speed = speed * ANIMATION_PERIOD
+        this.direction = originPos.angleTo2d(targetPos).radians()
+
         velocity = vec3( Cos(direction) * this.speed,
                          Sin(direction) * this.speed,
-                         Tan(arc) * this.speed
-        )
-        
+                         Tan(arc) * this.speed          )
+
         pos = originPos
+        missileSfx = addEffect( sfx, pos )
+        ..setRoll( direction )
 
-        missileSfx = addEffect( sfxPath, pos )
-        ..setRoll(direction)
-
-        // Timer
-        updateTimer = getTimer()
-        ..setData( this castTo int )
-        ..startPeriodic( UPDATEFREQ, () -> GetExpiredTimer().getData() castTo thistype.update() ) 
+        startTimedLoop()
 
 
 
     ondestroy
 
-        updateTimer.release()
-        missileSfx.destr()
         
+        missileSfx.destr()
+            
+
+    override function onTimedLoop()
+        update()
+
+    function postUpdate()
 
 
     function update()
 
-        if homing and targetUnit != null
-            targetPos = targetUnit.getPos3with(zOffset)
-            direction = pos.angleTo2d(targetPos).radians()
-        
-            velocity.x = Cos(direction) * speed
-            velocity.y = Sin(direction) * speed
-
-            missileSfx.setRoll(direction)
+        if action_preUpdate != null
+            action_preUpdate.run()
 
 
         real remainingDistance
@@ -217,17 +178,19 @@ public class Missile
                         collidedUnits.addUnit(target)
             
 
-    function onUpdate()
-        
+
 
         
-    function addPeriodicAction()
+    function addPeriodicAction( real time )
+        addPeriodicActionCounted(time, 0)
+
+    function addPeriodicActionCounted( real time, int counts )
 
 
     function onUnitCollision()
 
 
-    function addCollisionAction( real range, boolean is3d, boolean collideOnce, CollisionFilter filter, MissileUnitAction action )      
+    function addCollisionAction( real range, boolean is3d, boolean collideOnce, ProjectileFilter filter, MissileUnitAction action )      
         
         collisionEnabled = true
         collisionRange = range
@@ -242,6 +205,9 @@ public class Missile
     function addCollisionFilter(  )
 
 
+    function addPreUpdateAction( MissileAction action )
+        this.action_preUpdate = action
+
     function addOnFinishAction( MissileAction action )
         action_OnFinish = action
         
@@ -249,7 +215,10 @@ public class Missile
     function getPos() returns vec2
         return pos.toVec2()
 
+    /** Sets the distance for the missile to travel. If not destroyed, it will travel exactly this distance. */
+    function setDistance( real distance )
+        distanceToTravel = distance
+
+
     // function getPos3() returns vec3
     //     return pos
-
-
