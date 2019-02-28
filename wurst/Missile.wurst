@@ -3,13 +3,6 @@ import TimerUtils
 import LinkedList
 import ClosureTimers
 
-/*
-    [ ] Make adjustable updatefreq
-    [ ] Have all missiles on regular update freq update together
-*/
-
-
-
 
 public interface MissileAction
     function run()
@@ -34,6 +27,8 @@ public class Missile
     private vec3 velocity
 
     protected effect missileSfx
+
+    private boolean finished = false
 
     private vec3 targetPos 
     
@@ -61,7 +56,9 @@ public class Missile
     protected MissileAction action_preUpdate = null
     protected MissileAction action_postUpdate = null
 
+    private CallbackPeriodic updateCallback = null
 
+    
     construct( vec3 originPos, string sfxPath )
         pos = originPos
         missileSfx = addEffect(sfxPath, pos)
@@ -85,7 +82,7 @@ public class Missile
 
         missileSfx.setRoll( direction )
 
-        startTimedLoop()
+        startUpdate()
 
 
 
@@ -97,7 +94,7 @@ public class Missile
         if not arcEnabled
             doAfter( originPos.distanceTo(targetPos)/speed ) ->
                 //missile.stopTimedLoopAndDestroy()
-                destroy this
+                finish()
         
 
     function fireLine( vec3 targetPos, real distance, real speed )
@@ -107,7 +104,7 @@ public class Missile
 
         doAfter( distance/speed ) ->
             print("destroy")
-            destroy missile
+            finish()
 
 
     function fireUnit(unit targetUnit, real targetZOffset, boolean homing, real speed, real arc)
@@ -120,19 +117,10 @@ public class Missile
 
 
 
-    ondestroy    
-
-        if actionsOnFinish != null
-            for action in actionsOnFinish
-                action.run()
-                destroy action
-
-            destroy actionsOnFinish
-
+    ondestroy
         missileSfx.destr()
     
 
-    
 
     override function onTimedLoop()
 
@@ -155,7 +143,7 @@ public class Missile
 
             if speed >= remainingDistance
                 //stopTimedLoop()
-                destroy this
+                finish()
                 return
 
             else
@@ -199,8 +187,39 @@ public class Missile
             destroy action
 
 
-    function addCollisionFilter(  )
 
+    private function startUpdate()
+        if updateFreq > 0
+            updateCallback = doPeriodically( updateFreq ) cb ->
+                this.onTimedLoop()
+        else
+            startTimedLoop()
+
+        
+    private function stopUpdate()
+        if updateCallback != null
+            destroy updateCallback
+        stopTimedLoop()
+        
+
+    private function finish()
+        finished = true
+
+        stopUpdate()
+
+        if actionsOnFinish != null
+            for action in actionsOnFinish
+                action.run()
+                destroy action
+
+            destroy actionsOnFinish
+
+
+        if destroyOnFinish and finished
+            destroy this
+
+        
+    function addCollisionFilter(  )
 
     function addPreUpdateAction( MissileAction action )
         this.action_preUpdate = action
@@ -218,10 +237,13 @@ public class Missile
         pitchEnabled = false
 
     function setUpdateFreq( real freq )
-        updateFreq = freq
+        updateFreq = (freq > 0) ? freq : 0
 
     function setPos( vec3 pos )
         this.pos = pos
+
+    function getEffect() returns effect
+        return null
             
     
     
