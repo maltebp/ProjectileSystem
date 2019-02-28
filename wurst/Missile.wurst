@@ -1,18 +1,14 @@
 package Missile
 import TimerUtils
 import LinkedList
+import ClosureTimers
 
-    /*
+/*
+    [ ] Make adjustable updatefreq
+    [ ] Have all missiles on regular update freq update together
+*/
 
-        ProjectileTypes:
-            - Unit Target
-            - Unit Homing
-            - Position
 
-        Detections:
-            - On hit (unit, position etc)
-            - On Collision (perhaps using a filter function?)
-    */
 
 
 public interface MissileAction
@@ -27,10 +23,12 @@ public interface ProjectileFilter<T>
     function filter( T filterParam ) returns boolean
 
 
+
 public class Missile
 
     use TimedLoop
 
+    private real updateFreq = 0
 
     private vec3 pos
     private vec3 velocity
@@ -43,16 +41,20 @@ public class Missile
     
     private ProjectileFilter<unit> collisionFilter = null
 
-    private MissileAction action_OnFinish = null
-
     private LinkedList<MissileAction> actionsOnFinish = null
 
     private real direction
 
+    private boolean destroyOnFinish = true
+
     private unit targetUnit = null
+    private real targetZOffset = 0
 
+    private boolean pitchEnabled = true
 
-    private real distanceToTravel = 0 // It will travel exactly this distanceToTravel
+    private boolean homingEnabled = false
+    
+    private boolean arcEnabled = false
 
     private vec3 originPos
 
@@ -60,86 +62,117 @@ public class Missile
     protected MissileAction action_postUpdate = null
 
 
-    /** Generic point */
-    construct( vec3 originPos, vec3 targetPos, string sfxPath, real speed, real arc )
-        initialize(originPos, targetPos, sfxPath, speed, arc)
-    
-
-    /** Target = unit */
-    construct( unit targetUnit, real targetZOffset, vec3 originPos, boolean homing, string sfxPath, real speed, real arc  )
-        initialize(originPos, targetPos, sfxPath, speed, arc)
-
-        this.targetUnit = targetUnit
-
-        if homing 
-            action_preUpdate = () ->
-                this.targetPos = this.targetUnit.getPos3with(targetZOffset)
-                this.direction = this.pos.angleTo2d(this.targetPos).radians()
-            
-                this.velocity.x = Cos(this.direction) * this.speed
-                this.velocity.y = Sin(this.direction) * this.speed
-
-                this.missileSfx.setRoll(this.direction)
+    construct( vec3 originPos, string sfxPath )
+        pos = originPos
+        missileSfx = addEffect(sfxPath, pos)
 
 
-    private function initialize( vec3 originPos, vec3 targetPos, string sfx, real speed, real arc )
-        
-        this.originPos = originPos
+    /** Hidden missiles */
+    construct( vec3 originPos )
+        pos = originPos
+
+    /**   */
+    private function initialize( vec3 targetPos, real speed, real arc )
         this.targetPos = targetPos
         this.speed = speed * ANIMATION_PERIOD
-        this.direction = originPos.angleTo2d(targetPos).radians()
+        this.direction = pos.angleTo2d(targetPos).radians()
+
+        arcEnabled = arc > 0
 
         velocity = vec3( Cos(direction) * this.speed,
                          Sin(direction) * this.speed,
                          Tan(arc) * this.speed          )
 
-        pos = originPos
-        missileSfx = addEffect( sfx, pos )
-        ..setRoll( direction )
+        missileSfx.setRoll( direction )
 
         startTimedLoop()
 
 
 
+    function firePoint( vec3 targetPos, real speed, real arc )
+        initialize( targetPos, speed, arc)
+
+        let missile = this
+
+        if not arcEnabled
+            doAfter( originPos.distanceTo(targetPos)/speed ) ->
+                //missile.stopTimedLoopAndDestroy()
+                destroy this
+        
+
+    function fireLine( vec3 targetPos, real distance, real speed )
+        initialize( targetPos, speed, 0 )
+    
+        let missile = this
+
+        doAfter( distance/speed ) ->
+            print("destroy")
+            destroy missile
+
+
+    function fireUnit(unit targetUnit, real targetZOffset, boolean homing, real speed, real arc)
+        initialize( targetUnit.getPos3Real(), speed, arc)
+
+        homingEnabled = homing
+
+        this.targetUnit = targetUnit
+        this.targetZOffset = targetZOffset
+
+
+
     ondestroy    
+
+        if actionsOnFinish != null
+            for action in actionsOnFinish
+                action.run()
+                destroy action
+
+            destroy actionsOnFinish
+
         missileSfx.destr()
     
 
+    
 
     override function onTimedLoop()
 
         if action_preUpdate != null
             action_preUpdate.run()
         
-        let remainingDistance = (distanceToTravel > 0 ) ? distanceToTravel - pos.distanceTo2d(originPos.toVec2()) : pos.toVec2().distanceTo(targetPos.toVec2())
+        if homingEnabled
+            this.targetPos = this.targetUnit.getPos3with(targetZOffset)
+            this.direction = this.pos.angleTo2d(this.targetPos).radians()
+        
+            this.velocity.x = Cos(this.direction) * this.speed
+            this.velocity.y = Sin(this.direction) * this.speed
 
-        if speed >= remainingDistance
+            this.missileSfx.setRoll(this.direction)
 
-            if actionsOnFinish != null
-                for action in actionsOnFinish
-                    action.run()
-                    destroy action
 
-            destroy actionsOnFinish
+        if arcEnabled
+            print("...")
+            let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
 
-            destroy this
-            return
+            if speed >= remainingDistance
+                //stopTimedLoop()
+                destroy this
+                return
 
-        else
-            let heightDif =  targetPos.z - pos.z
-            let time = remainingDistance / speed
-            let gravity = (2 / time) * (heightDif / time - velocity.z)
+            else
+                let heightDif =  targetPos.z - pos.z
+                let time = remainingDistance / speed
+                let gravity = (2 / time) * (heightDif / time - velocity.z)
 
-            velocity.z += gravity
-            pos += velocity
+                velocity.z += gravity
 
-            missileSfx.setPos(pos)
-
-            let angle = Atan( velocity.z / speed )
+                if pitchEnabled
+                    let angle = Atan( velocity.z / speed )
+                    missileSfx.setPitch(-angle*Cos(direction))
+                    missileSfx.setYaw(angle*Sin(direction))
             
-            missileSfx.setPitch(-angle*Cos(direction))// * Sin(direction))
-            missileSfx.setYaw(angle*Sin(direction))//) * )
-
+        // Update position
+        pos += velocity
+        missileSfx.setPos(pos)
 
         if action_postUpdate != null
             action_postUpdate.run()
@@ -180,3 +213,16 @@ public class Missile
  
     function getPos() returns vec2
         return pos.toVec2()
+
+    function disablePitch()
+        pitchEnabled = false
+
+    function setUpdateFreq( real freq )
+        updateFreq = freq
+
+    function setPos( vec3 pos )
+        this.pos = pos
+            
+    
+    
+    

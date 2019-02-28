@@ -16,16 +16,22 @@ public let TESTABILITY_UNIT = compiletime( ABIL_ID_GEN.next() )
 init
     registerSpellEffectEvent( TESTABILITY_POINT ) ->
         let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
-        let origin = GetSpellAbilityUnit().getPos3Real()
+        let origin = GetSpellAbilityUnit().getPos3with(100)
         let caster = GetSpellAbilityUnit()
+        
+        let direction = origin.angleTo2d(target)
 
         var updateNumber = 0
 
         //new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
-        let missile = new Missile( origin, target, Abilities.wyvernSpearMissile, 500, 0 )
-        ..addCollisionAction(200, true, null) u ->
-            flashEffect( Abilities.zigguratMissile, u, "chest")
-            caster.damageTarget(u, 50)
+        // let missile = new Missile( origin, target, Abilities.wyvernSpearMissile, 500, 0 )
+        // ..addCollisionAction(200, true, null) u ->
+        //     flashEffect( Abilities.zigguratMissile, u, "chest")
+        //     caster.damageTarget(u, 50)
+
+        new Missile(origin, Abilities.wyvernSpearMissile)
+        ..firePoint(target, 700, 0)
+        //..fireLine(target, 700, 1000)
         
         
 
@@ -33,7 +39,7 @@ init
         let target = GetSpellTargetUnit()
         let origin = GetSpellAbilityUnit().getPos3with(0)
         
-        let missile = new Missile( target, 50, origin, true, Abilities.wyvernSpearMissile, 500, 1 )
+        //let missile = new Missile( target, 50, origin, true, Abilities.wyvernSpearMissile, 500, 1 )
 
 
 @compiletime
