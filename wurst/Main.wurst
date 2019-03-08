@@ -1,5 +1,7 @@
 package Main
 import TestAbility
+import Projectile
+import Assets
 
 
 
@@ -8,11 +10,20 @@ let UNIT = createUnit( Player(0), 'hfoo', vec2(0,0), angle(0) )
 
 
 init
-    UNIT.addAbility( TESTABILITY )
+    createUnit( Player(0), 'hfoo', vec2(0,0), angle(0) )
 
+    UNIT
+    ..addAbility( TESTABILITY_POINT )
+    ..addAbility( TESTABILITY_UNIT )
+    ..setColor( PLAYER_COLOR_BLUE )
 
+    createUnit( Player(0), UnitIds.mortarteam, vec2(0,0), angle(0))
 
-@compiletime
-function createAbilities()
+    let xMax = 500.
+    let xMin = -500.
+    let yMax = 500.
+    let yMin = -500.
 
-    
+    for i=0 to 20
+        let pos = vec2( GetRandomReal(xMin, xMax), GetRandomReal(yMin, yMax))
+        createUnit( Player(0), 'hfoo', pos, angle(0) )

@@ -1,0 +1,13 @@
+package MyMissile
+import CustomProjectile
+
+public class MyMissile extends CustomProjectile
+
+    construct(vec3 startPos, vec3 targetPos, real groundSpeed, real gravity, string effectPath)
+        super(startPos, targetPos, groundSpeed, gravity, effectPath)
+
+    construct(vec3 startPos, widget targetPos, real groundSpeed, real gravity, string effectPath)
+        super(startPos, targetPos, groundSpeed, gravity, effectPath)
+
+    override function onImpact()
+        print("impact")

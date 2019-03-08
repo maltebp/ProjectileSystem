@@ -3,24 +3,79 @@ package TestAbility
 import AbilityObjEditing
 import ObjectIdGenerator
 import RegisterEvents
-import Missile
+import Projectile
 import Assets
+import CustomProjectile
+import MyMissile
+import LinkedList
 
 
-public let TESTABILITY = compiletime( ABIL_ID_GEN.next() )
+public let TESTABILITY_POINT = compiletime( ABIL_ID_GEN.next() )
+public let TESTABILITY_UNIT = compiletime( ABIL_ID_GEN.next() )
 
 
 init
-    registerSpellEffectEvent( TESTABILITY ) ->
+    registerSpellEffectEvent( TESTABILITY_POINT ) ->
         let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
-        let origin = GetSpellAbilityUnit().getPos3with(100)
-        new Missile( target, origin, Abilities.arrowMissile1, 500,  0.5 )
+        let origin = GetSpellAbilityUnit().getPos().withTerrainZ(75)
+        let caster = GetSpellAbilityUnit()
+        
+        let direction = origin.angleTo2d(target)
+
+        var updateNumber = 0
+
+        //new MyMissile(origin, target, 500, 1500, Abilities.bloodElfMissile )
+        // let missile = new Missile(   origin, target, Abilities.wyvernSpearMissile, 500, 0 )
+        // ..addCollisionAction(200, true, null) u ->
+        //     flashEffect( Abilities.zigguratMissile, u, "chest")
+        //     caster.damageTarget(u, 50)
+
+        new Projectile(origin, Abilities.ballistaMissile)
+        ..firePoint(target, 900, 0)
+        //..fireLine(target, 700, 1000)
+        
+        
+
+    registerSpellEffectEvent( TESTABILITY_UNIT ) ->
+        let target = GetSpellTargetUnit()
+        let caster = GetSpellAbilityUnit()
+        let origin = GetSpellAbilityUnit().getPos3with(0)
+        
+        int count = 0
+
+        let hitTargets = new LinkedList<unit>
+        ..add(target)
+
+        let missile = new Projectile(origin + vec3(0,0,75), Abilities.glaiveMissile)
+        ..fireUnit(target, 75, true, 800, 0)
+        
+        missile.addActionOnFinish() ->
+            count++
+            if count <= 2
+
+                print("should find target")
+
+                let targets = ENUM_GROUP..enumUnitsInRange(target.getPos(), 500)
+                
+                for t from targets
+                    print("checking target")
+                    if t.isAlive() and not hitTargets.has(t)
+                        print("found target")
+                        missile.fireUnit(t, 50, true, 800, 0)
+                        hitTargets.add(t)
+                        break
+                
+                targets.clear()
+                    
+            else
+                destroy hitTargets
+            
 
 
 @compiletime
 function createAbility()
     
-    new AbilityDefinitionCarrionSwarmcreep( TESTABILITY )
+    new AbilityDefinitionCarrionSwarmcreep( TESTABILITY_POINT )
     ..setAnimationNames("attack")
     ..setMissileArt("")
     ..setTargetsAllowed(1, "none")
@@ -31,5 +86,21 @@ function createAbility()
     ..setName("Missile")
     ..setTooltipNormal(1, "Missile")
     ..setIconNormal(Icons.bTNClusterRockets)
+
+    new AbilityDefinitionFingerofDeath(TESTABILITY_UNIT)
+    ..setHeroAbility(false)
+    ..setArtTarget("")
+    ..setLightningEffects("")
+    ..setAnimationNames("attack")
+    ..setMissileArt("")
+    ..setTargetsAllowed(1, "ground,hero,nonhero")
+    ..setCastRange(1, 10000)
+    ..setManaCost(1, 0)
+    ..setCooldown(1, 0)
+    ..setName("Missile")
+    ..setTooltipNormal(1, "Missile")
+    ..setDamage(1, 0)
+    ..setIconNormal(Icons.bTNClusterRockets)
+
 
 

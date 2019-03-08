@@ -1,0 +1,37 @@
+package PitchYawRollTest
+import Assets
+
+effect sfx
+
+
+function setPitch()
+   
+
+    let enteredString = GetEventPlayerChatString()
+
+    if enteredString.length() > 4 and enteredString.substring(0, 4) == "set "
+        let input = enteredString.substring(4, enteredString.length() ).toReal()
+        
+        print("'"+input.toString()+"'")
+
+        sfx.setRoll(input)
+
+       
+
+init
+
+    // sfx = addEffect( Abilities.wyvernSpearMissile, vec2(0,0))
+    // ..setHeight(150)
+    // ..setScale(1.5)
+
+    CreateTrigger()
+    ..registerPlayerChatEvent(Player(0), "set ", false)
+    .addAction(function setPitch)
+
+    // CreateTrigger()
+    // ..registerPlayerChatEvent(whichPlayer, chatMessageToDetect, exactMatchOnly)
+    
+
+    // Pitch rotation around the y axis Setting it to 0 or to 2pi will make it go backwards
+    // Yaw: rotation around the x axis
+    // Roll: rotation around the z-axis 0 pointing east
