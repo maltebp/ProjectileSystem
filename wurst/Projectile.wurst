@@ -1,15 +1,27 @@
+//=============================================================================================================================================
+
 package Projectile
+
+//=============================================================================================================================================
 
 import TimerUtils
 import LinkedList
 import ClosureTimers
 
+//=============================================================================================================================================
 /*
-    HOW TO USE:
-    Construct a new projectile using any of the constructors. Then fire the projectile using any of the
-    fire methods.
-*/
+    ABOUT
+    A system to create custom projectiles with, using closures rather than inheritance (abstract classes).
 
+    HOW TO USE:
+    Construct a new projectile using any of the constructors, and fire it using any of the
+    fire methods.
+
+        - ADD EFFECT (such as damage) by using the addActionOnFinish() method
+        - ADD COLLSION aoe collision by using the addCollisionAction() method
+        
+*/
+//=============================================================================================================================================
 public class Projectile
 
     protected effect projectileSfx
@@ -37,6 +49,8 @@ public class Projectile
     private LinkedList<ProjectileAction>   actionsOnFinish = null
     private ProjectileAction               action_preUpdate = null
     private ProjectileAction               action_postUpdate = null
+
+    private group collidedUnits = null
 
     // For updating
     private static let instances = new LinkedList<thistype>
@@ -151,6 +165,9 @@ public class Projectile
         if action_postUpdate != null
             destroy action_postUpdate
 
+        if collidedUnits != null
+            collidedUnits.destr()
+
         projectileSfx
         ..setYaw(0)
         ..setPitch(0)
@@ -260,27 +277,24 @@ public class Projectile
     /**
         Activate collision detection for the projectile, and run custom action. To add a filter, use the setCollisionFilter() method.
         You may also just do the filtering within the action you're implementing. 
+        To make the projectile able to hit same targets again, use the clearCollidedUnits() method. 
             range:          The range at which to detect units
             collideOnce:    False will make it collide with the unit every ANIMATION_PERIOD (~0.03 seconds)
             action:         The action to run once a target is hit */
     function addCollisionAction( real range, boolean collideOnce, ProjectileUnitAction action )
-        group collidedTargets = null
+        
 
-        if collideOnce
-            collidedTargets = CreateGroup()
+        if collideOnce and collidedUnits == null
+            collidedUnits = CreateGroup()
 
         action_postUpdate = ->
             let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
                     
             for target from targets
-
-                if (not collideOnce or not collidedTargets.contains(target)) and (this.collisionFilter == null or this.collisionFilter.filter(target))
+                if (not collideOnce or not collidedUnits.contains(target)) and (this.collisionFilter == null or this.collisionFilter.filter(target))
                     action.run(target)
-                    collidedTargets.addUnit(target)
-
-        addActionOnFinish() ->
-            collidedTargets.destr()
-            destroy action
+                    collidedUnits.addUnit(target)
+                
 
 
     /**
@@ -309,24 +323,34 @@ public class Projectile
     function disablePitch()
         pitchEnabled = false
 
+
     /** Sets a custom update frequency for the projectile. The projectile will reach it's target once the distance it moves at
         an update is less than the remaining distance towards the target point.
         Example: if speed is 500, distance is 1200 and update freq is 1 second, it will only move twice. */
     function setUpdateFreq( real freq )
         updateFreq = (freq > 0) ? freq : 0
 
+
     /** NOT TESTED May behave strangley if used while a projectile is in flight */
     function setPos( vec3 pos )
         this.pos = pos
         projectileSfx.setPos(pos)
 
+
     /** Returns the sfx of the projectile, so you may rescale it, change it's color etc. */
     function getEffect() returns effect
         return projectileSfx
 
+
     /** Returns the target unit of the fireUnit() method */
     function getTargetUnit() returns unit
         return targetUnit
+
+
+    /** Clears all unit's the projectile has collided with, such that it may collide with them again */
+    function clearCollidedUnits()
+        if collidedUnits != null
+            collidedUnits.clear()
 
     
     /** Toggles the projectile to be destroyed or not once it's finished (reached it's target). Default is 'true'
@@ -334,7 +358,9 @@ public class Projectile
     function destroyOnFinish( boolean toggle )
         destroyOnFinish = toggle
 
-    
+
+//=============================================================================================================================================
+
 
 public interface ProjectileAction
     function run()
