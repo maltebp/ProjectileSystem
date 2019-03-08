@@ -3,7 +3,7 @@ package TestAbility
 import AbilityObjEditing
 import ObjectIdGenerator
 import RegisterEvents
-import Missile
+import Projectile
 import Assets
 import CustomProjectile
 import MyMissile
@@ -30,7 +30,7 @@ init
         //     flashEffect( Abilities.zigguratMissile, u, "chest")
         //     caster.damageTarget(u, 50)
 
-        new Missile(origin, Abilities.ballistaMissile)
+        new Projectile(origin, Abilities.ballistaMissile)
         ..firePoint(target, 900, 0)
         //..fireLine(target, 700, 1000)
         
@@ -46,7 +46,7 @@ init
         let hitTargets = new LinkedList<unit>
         ..add(target)
 
-        let missile = new Missile(origin + vec3(0,0,75), Abilities.glaiveMissile)
+        let missile = new Projectile(origin + vec3(0,0,75), Abilities.glaiveMissile)
         ..fireUnit(target, 75, true, 800, 0)
         
         missile.addActionOnFinish() ->

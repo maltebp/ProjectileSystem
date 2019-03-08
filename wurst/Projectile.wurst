@@ -1,4 +1,4 @@
-package Missile
+package Projectile
 
 import TimerUtils
 import LinkedList
@@ -6,13 +6,13 @@ import ClosureTimers
 
 /*
     HOW TO USE:
-    Construct a new missile using any of the constructors. Then fire the missile using any of the
+    Construct a new projectile using any of the constructors. Then fire the projectile using any of the
     fire methods.
 */
 
-public class Missile
+public class Projectile
 
-    protected effect missileSfx
+    protected effect projectileSfx
 
     private vec3 pos
     private vec3 velocity // Directed speed
@@ -34,9 +34,9 @@ public class Missile
 
     // Remote Functions
     private ProjectileFilter<unit>      collisionFilter = null
-    private LinkedList<MissileAction>   actionsOnFinish = null
-    private MissileAction               action_preUpdate = null
-    private MissileAction               action_postUpdate = null
+    private LinkedList<ProjectileAction>   actionsOnFinish = null
+    private ProjectileAction               action_preUpdate = null
+    private ProjectileAction               action_postUpdate = null
 
     // For updating
     private static let instances = new LinkedList<thistype>
@@ -49,16 +49,16 @@ public class Missile
     // ===============================================================
 
     /** 
-        Constructs a new missile, which may be fired with any of the "fire" methods (i.e. 'firePoint()).
-            originPos:  The position at which to create the missile. Adjust z-coordinate of this to adjust start height of the missile.
-            sfxPath:    The model path for the missile
+        Constructs a new projectile, which may be fired with any of the "fire" methods (i.e. 'firePoint()).
+            originPos:  The position at which to create the projectile. Adjust z-coordinate of this to adjust start height of the projectile.
+            sfxPath:    The model path for the projectile
     */
     construct( vec3 originPos, string sfxPath )
         pos = originPos
-        missileSfx = addEffect(sfxPath, pos)
+        projectileSfx = addEffect(sfxPath, pos)
 
         
-    /**  Constructs a "hidden" missile object without a model. May be fired with any of the "fire" methods (i.e. 'firePoint()). */
+    /**  Constructs a "hidden" projectile object without a model. May be fired with any of the "fire" methods (i.e. 'firePoint()). */
     construct( vec3 originPos )
         pos = originPos
 
@@ -66,9 +66,9 @@ public class Missile
     /**
         Fires the projectile towards a target unit. 
             targetZOffset:  Vertical offset the projectile will hit. No offset will make it strike the unit's origin.
-            homing:     Makes the missile chase the unit. If not enabled the missiles target will be the unit's position.
+            homing:     Makes the projectile chase the unit. If not enabled the projectiles target will be the unit's position.
             speed:      The speed of the projectile (range per second). Same factor as original WC3 projectile.
-            arc:        The arc of the projectile. Same factor as original WC3 missiles (not radians nor degrees).
+            arc:        The arc of the projectile. Same factor as original WC3 projectiles (not radians nor degrees).
     */
     function fireUnit(unit targetUnit, real targetZOffset, boolean homing, real speed, real arc)
         initialize( targetUnit.getPos3Real(), speed, arc)
@@ -82,7 +82,7 @@ public class Missile
         Fires the projectile towards a point.
             targetPos:  The target point. The target z offset may be adjusted with this.
             speed:      The speed of the projectile (range per second). Same factor as original WC3 projectile.
-            arc:        The arc of the projectile. Same factor as original WC3 missiles (not radians nor degrees).
+            arc:        The arc of the projectile. Same factor as original WC3 projectiles (not radians nor degrees).
     */
     function firePoint( vec3 targetPos, real speed, real arc )
         initialize( targetPos, speed, arc)
@@ -104,7 +104,7 @@ public class Missile
             finish()
 
     
-    /* Initializes the missile with some generic things, such as calculating a starting velocity,
+    /* Initializes the projectile with some generic things, such as calculating a starting velocity,
         the actual speed (range per ANIMATION_PERIOD) etc.
     */
     private function initialize( vec3 targetPos, real speed, real arc )
@@ -132,10 +132,10 @@ public class Missile
 
         if pitchEnabled
             let angle = Atan( velocity.z / this.speed )
-            missileSfx.setPitch(-angle*Cos(direction))
-            missileSfx.setYaw(angle*Sin(direction))
+            projectileSfx.setPitch(-angle*Cos(direction))
+            projectileSfx.setYaw(angle*Sin(direction))
             
-        missileSfx.setRoll( direction )
+        projectileSfx.setRoll( direction )
 
         startUpdate()
 
@@ -151,7 +151,7 @@ public class Missile
         if action_postUpdate != null
             destroy action_postUpdate
 
-        missileSfx
+        projectileSfx
         ..setYaw(0)
         ..setPitch(0)
         ..destr()
@@ -174,12 +174,12 @@ public class Missile
             this.velocity.y = Sin(this.direction) * this.speed
             this.velocity.z = (targetPos.z - pos.z) / remainingTime
 
-            this.missileSfx.setRoll(this.direction)
+            this.projectileSfx.setRoll(this.direction)
 
             if pitchEnabled
                 let angle = Atan( velocity.z / speed )
-                missileSfx.setPitch(-angle*Cos(direction))
-                missileSfx.setYaw(angle*Sin(direction))
+                projectileSfx.setPitch(-angle*Cos(direction))
+                projectileSfx.setYaw(angle*Sin(direction))
 
             if speed >= remainingDistance
                 finish()
@@ -201,12 +201,12 @@ public class Missile
 
                 if pitchEnabled
                     let angle = Atan( velocity.z / speed )
-                    missileSfx.setPitch(-angle*Cos(direction))
-                    missileSfx.setYaw(angle*Sin(direction))
+                    projectileSfx.setPitch(-angle*Cos(direction))
+                    projectileSfx.setYaw(angle*Sin(direction))
             
         // Update position
         pos += velocity
-        missileSfx.setPos(pos)
+        projectileSfx.setPos(pos)
 
         if action_postUpdate != null
             action_postUpdate.run()
@@ -251,22 +251,24 @@ public class Missile
         Adds an action to run once the projectile has reached it target set by the used 'fire' method, like damage, bounce etc.
         You may add several pieces of code to run using this.
     */
-    function addActionOnFinish( MissileAction action )
+    function addActionOnFinish( ProjectileAction action )
         if actionsOnFinish == null
-            actionsOnFinish = new LinkedList<MissileAction>
+            actionsOnFinish = new LinkedList<ProjectileAction>
         actionsOnFinish.add(action)
 
 
     /**
-        Activate collision detection for the projectile, and run custom action. To add a filter, use the setCollisionFilter() method. 
+        Activate collision detection for the projectile, and run custom action. To add a filter, use the setCollisionFilter() method.
+        You may also just do the filtering within the action you're implementing. 
             range:          The range at which to detect units
             collideOnce:    False will make it collide with the unit every ANIMATION_PERIOD (~0.03 seconds)
             action:         The action to run once a target is hit */
-    function addCollisionAction( real range, boolean collideOnce, MissileUnitAction action )
+    function addCollisionAction( real range, boolean collideOnce, ProjectileUnitAction action )
         group collidedTargets = null
 
         if collideOnce
             collidedTargets = CreateGroup()
+
         action_postUpdate = ->
             let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
                     
@@ -292,9 +294,9 @@ public class Missile
 
     
     /**
-        Add some code to run before each update of the missile position.
+        Add some code to run before each update of the projectile position.
     */
-    function addPreUpdateAction( MissileAction action )
+    function addPreUpdateAction( ProjectileAction action )
         this.action_preUpdate = action        
  
     function getPos() returns vec2
@@ -303,7 +305,7 @@ public class Missile
     function getPos3() returns vec3
         return pos
 
-    /** Disable this to make the missile point in the same vertical direction regardless of the vertical velocity */
+    /** Disable this to make the projectile point in the same vertical direction regardless of the vertical velocity */
     function disablePitch()
         pitchEnabled = false
 
@@ -316,11 +318,11 @@ public class Missile
     /** NOT TESTED May behave strangley if used while a projectile is in flight */
     function setPos( vec3 pos )
         this.pos = pos
-        missileSfx.setPos(pos)
+        projectileSfx.setPos(pos)
 
     /** Returns the sfx of the projectile, so you may rescale it, change it's color etc. */
     function getEffect() returns effect
-        return missileSfx
+        return projectileSfx
 
     /** Returns the target unit of the fireUnit() method */
     function getTargetUnit() returns unit
@@ -334,10 +336,10 @@ public class Missile
 
     
 
-public interface MissileAction
+public interface ProjectileAction
     function run()
     
-public interface MissileUnitAction
+public interface ProjectileUnitAction
     function run(unit target)
     
 public interface ProjectileFilter<T>
