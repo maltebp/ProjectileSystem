@@ -189,7 +189,9 @@ public class Projectile
         
             this.velocity.x = Cos(this.direction) * this.speed
             this.velocity.y = Sin(this.direction) * this.speed
-            this.velocity.z = (targetPos.z - pos.z) / remainingTime
+
+            if not arcEnabled
+                this.velocity.z = (targetPos.z - pos.z) / remainingTime
 
             this.projectileSfx.setRoll(this.direction)
 
