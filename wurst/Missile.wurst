@@ -1,4 +1,5 @@
 package Missile
+
 import TimerUtils
 import LinkedList
 import ClosureTimers
@@ -16,10 +17,10 @@ public interface ProjectileFilter<T>
     function filter( T filterParam ) returns boolean
 
 
-
 public class Missile
 
-    use TimedLoop
+    private static let instances = new LinkedList<thistype>
+    private static let updateTimer = getTimer() 
 
     private real updateFreq = 0
 
@@ -67,9 +68,6 @@ public class Missile
     /** Hidden missiles */
     construct( vec3 originPos )
         pos = originPos
-
-    
-
 
     function firePoint( vec3 targetPos, real speed, real arc )
         initialize( targetPos, speed, arc)
@@ -128,7 +126,8 @@ public class Missile
     
 
 
-    override function onTimedLoop()
+    
+    function update()
 
         if action_preUpdate != null
             action_preUpdate.run()
@@ -198,21 +197,27 @@ public class Missile
             destroy action
 
 
-
     private function startUpdate()
-        if updateFreq > 0
+        if updateFreq > 0 // Checking for custom update freq
             updateCallback = doPeriodically( updateFreq ) cb ->
-                this.onTimedLoop()
+                this.update()
         else
-            startTimedLoop()
+            instances.add(this)
+            if instances.size() == 1
+                updateTimer.startPeriodic( ANIMATION_PERIOD ) ->
+                    for instance in instances
+                        instance.update()
 
-        
+
     private function stopUpdate()
         if updateCallback != null
             destroy updateCallback
-        stopTimedLoop()
-        
+        else
+            instances.remove(this)
+            if instances.size() == 0
+                updateTimer.pause()
 
+    
     private function finish()
         finished = true
 
