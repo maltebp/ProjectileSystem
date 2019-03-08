@@ -112,11 +112,20 @@ public class Missile
 
         arcEnabled = arc > 0
 
+        real zVelocity
+
+        if arc == 0
+            let distance = targetPos.distanceTo2d(pos)
+            let time = distance / this.speed
+            zVelocity = (targetPos.getTerrainZ() - pos.getTerrainZ()) / time
+        else
+            // this.speed*4*arc is the adjustment which gives it the WC3 like arc
+            zVelocity = this.speed*4*arc  
+
         velocity = vec3( Cos(direction) * this.speed,
-                         Sin(direction) * this.speed,
-                         this.speed*4*arc          )
-        // this.speed*4*arc is the adjustment which gives it the WC3 like arc
-        
+                        Sin(direction) * this.speed,
+                        zVelocity )
+            
         missileSfx.setRoll( direction )
 
         startUpdate()
@@ -145,14 +154,23 @@ public class Missile
             action_preUpdate.run()
         
         if homingEnabled
+            let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
+            let remainingTime = remainingDistance / speed
+
             this.targetPos = this.targetUnit.getPos3with(targetZOffset)
             this.direction = this.pos.angleTo2d(this.targetPos).radians()
         
             this.velocity.x = Cos(this.direction) * this.speed
             this.velocity.y = Sin(this.direction) * this.speed
+            this.velocity.z = (targetPos.z - pos.z) / remainingTime
 
             this.missileSfx.setRoll(this.direction)
-            let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
+
+            if pitchEnabled
+                let angle = Atan( velocity.z / speed )
+                missileSfx.setPitch(-angle*Cos(direction))
+                missileSfx.setYaw(angle*Sin(direction))
+
 
             if speed >= remainingDistance
                 //stopTimedLoop()

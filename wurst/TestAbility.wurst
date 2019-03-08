@@ -31,7 +31,7 @@ init
         //     caster.damageTarget(u, 50)
 
         new Missile(origin, Abilities.mortarMissile)
-        ..firePoint(target, 900, 0.35)
+        ..firePoint(target, 900, 0)
         //..fireLine(target, 700, 1000)
         
         
