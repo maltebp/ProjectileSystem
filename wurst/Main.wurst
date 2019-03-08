@@ -11,7 +11,7 @@ let UNIT = createUnit( Player(0), 'hfoo', vec2(0,0), angle(0) )
 
 init
     createUnit( Player(0), 'hfoo', vec2(0,0), angle(0) )
-    
+
     UNIT
     ..addAbility( TESTABILITY_POINT )
     ..addAbility( TESTABILITY_UNIT )

@@ -10,113 +10,117 @@ import ClosureTimers
     fire methods.
 */
 
-
-public interface MissileAction
-    function run()
-
-
-public interface MissileUnitAction
-    function run(unit target)
-
-
-public interface ProjectileFilter<T>
-    function filter( T filterParam ) returns boolean
-
-
 public class Missile
-
-    private static let instances = new LinkedList<thistype>
-    private static let updateTimer = getTimer() 
-
-    private real updateFreq = 0
-
-    private vec3 pos
-    private vec3 velocity
 
     protected effect missileSfx
 
-    private boolean finished = false
-
-    private vec3 targetPos 
-    
-    private real speed
-    
-    private ProjectileFilter<unit> collisionFilter = null
-
-    private LinkedList<MissileAction> actionsOnFinish = null
-
+    private vec3 pos
+    private vec3 velocity // Directed speed
+    private real speed // Total speed
     private real direction
 
-    private boolean destroyOnFinish = true
-
+    private vec3 targetPos
     private unit targetUnit = null
     private real targetZOffset = 0
+     
+    // Toggleable
+    private boolean pitchEnabled    = true
+    private boolean destroyOnFinish = true
 
-    private boolean pitchEnabled = true
+    // Other bools
+    private boolean finished        = false
+    private boolean arcEnabled      = false
+    private boolean homingEnabled   = false
 
-    private boolean homingEnabled = false
-    
-    private boolean arcEnabled = false
+    // Remote Functions
+    private ProjectileFilter<unit>      collisionFilter = null
+    private LinkedList<MissileAction>   actionsOnFinish = null
+    private MissileAction               action_preUpdate = null
+    private MissileAction               action_postUpdate = null
 
-    protected MissileAction action_preUpdate = null
-    protected MissileAction action_postUpdate = null
+    // For updating
+    private static let instances = new LinkedList<thistype>
+    private static let updateTimer = getTimer()
 
+    private real updateFreq = 0
     private CallbackPeriodic updateCallback = null
 
-    
+
+    // ===============================================================
+
+    /** 
+        Constructs a new missile, which may be fired with any of the "fire" methods (i.e. 'firePoint()).
+            originPos:  The position at which to create the missile. Adjust z-coordinate of this to adjust start height of the missile.
+            sfxPath:    The model path for the missile
+    */
     construct( vec3 originPos, string sfxPath )
         pos = originPos
         missileSfx = addEffect(sfxPath, pos)
 
-
-    /** Hidden missiles */
+        
+    /**  Constructs a "hidden" missile object without a model. May be fired with any of the "fire" methods (i.e. 'firePoint()). */
     construct( vec3 originPos )
         pos = originPos
 
+
+    /**
+        Fires the projectile towards a target unit. 
+            targetZOffset:  Vertical offset the projectile will hit. No offset will make it strike the unit's origin.
+            homing:     Makes the missile chase the unit. If not enabled the missiles target will be the unit's position.
+            speed:      The speed of the projectile (range per second). Same factor as original WC3 projectile.
+            arc:        The arc of the projectile. Same factor as original WC3 missiles (not radians nor degrees).
+    */
+    function fireUnit(unit targetUnit, real targetZOffset, boolean homing, real speed, real arc)
+        initialize( targetUnit.getPos3Real(), speed, arc)
+
+        homingEnabled = homing
+        this.targetUnit = targetUnit
+        this.targetZOffset = targetZOffset
+
+
+    /**
+        Fires the projectile towards a point.
+            targetPos:  The target point. The target z offset may be adjusted with this.
+            speed:      The speed of the projectile (range per second). Same factor as original WC3 projectile.
+            arc:        The arc of the projectile. Same factor as original WC3 missiles (not radians nor degrees).
+    */
     function firePoint( vec3 targetPos, real speed, real arc )
         initialize( targetPos, speed, arc)
-
         if not arcEnabled
             doAfter( pos.distanceTo2d(targetPos)/speed ) ->
                 finish()
         
 
+    /**
+        Fires the projectile towards a point but for a set distance. Use addCollisionAction() and addCollisionFilter() to add
+        collision detection and effect.
+            targetPos:  The target point to fire towards (may not necessarily hit this point)
+            distance:   A specific distance the projectile will travel
+            speed:      The speed of the projectile (range per second). Same factor as original WC3 projectile.
+    */
     function fireLine( vec3 targetPos, real distance, real speed )
         initialize( targetPos, speed, 0 )
-        
-
         doAfter( distance/speed ) ->
             finish()
 
-
-
-    function fireUnit(unit targetUnit, real targetZOffset, boolean homing, real speed, real arc)
-        initialize( targetUnit.getPos3Real(), speed, arc)
-
-        homingEnabled = homing
-
-        this.targetUnit = targetUnit
-        this.targetZOffset = targetZOffset
-
-
-    /**   */
+    
+    /* Initializes the missile with some generic things, such as calculating a starting velocity,
+        the actual speed (range per ANIMATION_PERIOD) etc.
+    */
     private function initialize( vec3 targetPos, real speed, real arc )
         this.targetPos = targetPos
         this.speed = speed * ANIMATION_PERIOD
         this.direction = pos.angleTo2d(targetPos).radians()
-
         finished = false
 
         arcEnabled = arc > 0
 
         real zVelocity
 
-
-        if arc == 0
+        if arcEnabled
             let distance = targetPos.distanceTo2d(pos)
             let time = distance / this.speed
             zVelocity = (targetPos.z - pos.z) / time
-
            
         else
             // this.speed*4*arc is the adjustment which gives it the WC3 like arc
@@ -135,28 +139,29 @@ public class Missile
 
         startUpdate()
 
-
-
-
     ondestroy
         if actionsOnFinish != null
             for actionOnFinish in actionsOnFinish
                 destroy actionOnFinish
             destroy actionsOnFinish
 
+        if collisionFilter != null
+            destroy collisionFilter
+
+        if action_postUpdate != null
+            destroy action_postUpdate
+
         missileSfx
         ..setYaw(0)
         ..setPitch(0)
         ..destr()
 
-    
 
-
-    
-    function update()
-
+    protected function update()
         if action_preUpdate != null
             action_preUpdate.run()
+
+        // The method is split into different sections in order to optimize the run speed.
         
         if homingEnabled
             let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
@@ -176,18 +181,14 @@ public class Missile
                 missileSfx.setPitch(-angle*Cos(direction))
                 missileSfx.setYaw(angle*Sin(direction))
 
-
             if speed >= remainingDistance
-                //stopTimedLoop()
                 finish()
                 return
-
 
         if arcEnabled
             let remainingDistance = pos.distanceTo2d(targetPos.toVec2())
 
             if speed >= remainingDistance
-                //stopTimedLoop()
                 finish()
                 return
 
@@ -210,25 +211,6 @@ public class Missile
         if action_postUpdate != null
             action_postUpdate.run()
 
-
-    function addCollisionAction( real range, boolean collideOnce, ProjectileFilter filter, MissileUnitAction action )      
-        
-        group collidedTargets = null
-
-        if collideOnce
-            collidedTargets = CreateGroup()
-        action_postUpdate = ->
-            let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
-                    
-            for target from targets
-
-                if (not collideOnce or not collidedTargets.contains(target)) and (this.collisionFilter == null or this.collisionFilter.filter(target))
-                    action.run(target)
-                    collidedTargets.addUnit(target)
-
-        addActionOnFinish() ->
-            collidedTargets.destr()
-            destroy action
 
 
     private function startUpdate()
@@ -264,37 +246,101 @@ public class Missile
         if destroyOnFinish and finished
             destroy this
 
-        
-    function addCollisionFilter(  )
 
-    function addPreUpdateAction( MissileAction action )
-        this.action_preUpdate = action
-
+    /**
+        Adds an action to run once the projectile has reached it target set by the used 'fire' method, like damage, bounce etc.
+        You may add several pieces of code to run using this.
+    */
     function addActionOnFinish( MissileAction action )
         if actionsOnFinish == null
             actionsOnFinish = new LinkedList<MissileAction>
         actionsOnFinish.add(action)
-        
+
+
+    /**
+        Activate collision detection for the projectile, and run custom action. To add a filter, use the setCollisionFilter() method. 
+            range:          The range at which to detect units
+            collideOnce:    False will make it collide with the unit every ANIMATION_PERIOD (~0.03 seconds)
+            action:         The action to run once a target is hit */
+    function addCollisionAction( real range, boolean collideOnce, MissileUnitAction action )
+        group collidedTargets = null
+
+        if collideOnce
+            collidedTargets = CreateGroup()
+        action_postUpdate = ->
+            let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
+                    
+            for target from targets
+
+                if (not collideOnce or not collidedTargets.contains(target)) and (this.collisionFilter == null or this.collisionFilter.filter(target))
+                    action.run(target)
+                    collidedTargets.addUnit(target)
+
+        addActionOnFinish() ->
+            collidedTargets.destr()
+            destroy action
+
+
+    /**
+        Makes the projectile detect collision with units. To add a filter, use the setCollisionFilter() method.
+            range:          The range at which to detect units
+            collideOnce:    False will make it collide with the unit every ANIMATION_PERIOD (~0.03 seconds)
+            action:         The action to run once a target is hit
+    */    
+    function setCollisionFilter( ProjectileFilter<unit> filter )
+        this.collisionFilter = filter
+
+    
+    /**
+        Add some code to run before each update of the missile position.
+    */
+    function addPreUpdateAction( MissileAction action )
+        this.action_preUpdate = action        
  
     function getPos() returns vec2
         return pos.toVec2()
 
+    function getPos3() returns vec3
+        return pos
+
+    /** Disable this to make the missile point in the same vertical direction regardless of the vertical velocity */
     function disablePitch()
         pitchEnabled = false
 
+    /** Sets a custom update frequency for the projectile. The projectile will reach it's target once the distance it moves at
+        an update is less than the remaining distance towards the target point.
+        Example: if speed is 500, distance is 1200 and update freq is 1 second, it will only move twice. */
     function setUpdateFreq( real freq )
         updateFreq = (freq > 0) ? freq : 0
 
+    /** NOT TESTED May behave strangley if used while a projectile is in flight */
     function setPos( vec3 pos )
         this.pos = pos
+        missileSfx.setPos(pos)
 
+    /** Returns the sfx of the projectile, so you may rescale it, change it's color etc. */
     function getEffect() returns effect
-        return null
+        return missileSfx
 
+    /** Returns the target unit of the fireUnit() method */
     function getTargetUnit() returns unit
         return targetUnit
 
-            
     
+    /** Toggles the projectile to be destroyed or not once it's finished (reached it's target). Default is 'true'
+        Toggle false, if you want to reuse the projectile once it's finished (for bounce i.e.). */
+    function destroyOnFinish( boolean toggle )
+        destroyOnFinish = toggle
+
+    
+
+public interface MissileAction
+    function run()
+    
+public interface MissileUnitAction
+    function run(unit target)
+    
+public interface ProjectileFilter<T>
+    function filter( T filterParam ) returns boolean
     
     
