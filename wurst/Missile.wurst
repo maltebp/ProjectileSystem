@@ -4,6 +4,13 @@ import TimerUtils
 import LinkedList
 import ClosureTimers
 
+/*
+    HOW TO USE:
+    Construct a new missile using any of the constructors. Then fire the missile using any of the
+    fire methods.
+*/
+
+
 
 public interface MissileAction
     function run()
@@ -107,8 +114,9 @@ public class Missile
 
         velocity = vec3( Cos(direction) * this.speed,
                          Sin(direction) * this.speed,
-                         Tan(arc) * this.speed          )
-
+                         this.speed*4*arc          )
+        // this.speed*4*arc is the adjustment which gives it the WC3 like arc
+        
         missileSfx.setRoll( direction )
 
         startUpdate()
@@ -122,7 +130,11 @@ public class Missile
                 destroy actionOnFinish
             destroy actionsOnFinish
 
-        missileSfx.destr()
+        missileSfx
+        ..setYaw(0)
+        ..setPitch(0)
+        ..destr()
+
     
 
 
@@ -149,7 +161,6 @@ public class Missile
 
 
         if arcEnabled
-            print("...")
             let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
 
             if speed >= remainingDistance
@@ -228,7 +239,6 @@ public class Missile
                 action.run()
 
         if destroyOnFinish and finished
-            
             destroy this
 
         
