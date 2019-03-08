@@ -132,13 +132,14 @@ public class Projectile
         real zVelocity
 
         if arcEnabled
+            // this.speed*4*arc is the adjustment which gives it the WC3 like arc
+            zVelocity = this.speed*4*arc  
+           
+        else
             let distance = targetPos.distanceTo2d(pos)
             let time = distance / this.speed
             zVelocity = (targetPos.z - pos.z) / time
-           
-        else
-            // this.speed*4*arc is the adjustment which gives it the WC3 like arc
-            zVelocity = this.speed*4*arc  
+            
 
         velocity = vec3( Cos(direction) * this.speed,
                         Sin(direction) * this.speed,
@@ -190,6 +191,7 @@ public class Projectile
             this.velocity.x = Cos(this.direction) * this.speed
             this.velocity.y = Sin(this.direction) * this.speed
 
+            // TEMPORARY SOLUTION!4
             if not arcEnabled
                 this.velocity.z = (targetPos.z - pos.z) / remainingTime
 
