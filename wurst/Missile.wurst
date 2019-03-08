@@ -80,7 +80,7 @@ public class Missile
         initialize( targetPos, speed, arc)
 
         if not arcEnabled
-            doAfter( originPos.distanceTo(targetPos)/speed ) ->
+            doAfter( originPos.distanceTo2d(targetPos)/speed ) ->
                 finish()
         
 
@@ -117,7 +117,7 @@ public class Missile
         if arc == 0
             let distance = targetPos.distanceTo2d(pos)
             let time = distance / this.speed
-            zVelocity = (targetPos.getTerrainZ() - pos.getTerrainZ()) / time
+            zVelocity = (targetPos.z - pos.z) / time
         else
             // this.speed*4*arc is the adjustment which gives it the WC3 like arc
             zVelocity = this.speed*4*arc  
@@ -157,7 +157,7 @@ public class Missile
             let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
             let remainingTime = remainingDistance / speed
 
-            this.targetPos = this.targetUnit.getPos3with(targetZOffset)
+            this.targetPos = this.targetUnit.getPos().withTerrainZ(targetZOffset)
             this.direction = this.pos.angleTo2d(this.targetPos).radians()
         
             this.velocity.x = Cos(this.direction) * this.speed
