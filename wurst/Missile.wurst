@@ -11,7 +11,6 @@ import ClosureTimers
 */
 
 
-
 public interface MissileAction
     function run()
 
@@ -59,8 +58,6 @@ public class Missile
     
     private boolean arcEnabled = false
 
-    private vec3 originPos
-
     protected MissileAction action_preUpdate = null
     protected MissileAction action_postUpdate = null
 
@@ -80,7 +77,7 @@ public class Missile
         initialize( targetPos, speed, arc)
 
         if not arcEnabled
-            doAfter( originPos.distanceTo2d(targetPos)/speed ) ->
+            doAfter( pos.distanceTo2d(targetPos)/speed ) ->
                 finish()
         
 
@@ -114,10 +111,13 @@ public class Missile
 
         real zVelocity
 
+
         if arc == 0
             let distance = targetPos.distanceTo2d(pos)
             let time = distance / this.speed
             zVelocity = (targetPos.z - pos.z) / time
+
+           
         else
             // this.speed*4*arc is the adjustment which gives it the WC3 like arc
             zVelocity = this.speed*4*arc  
@@ -125,6 +125,11 @@ public class Missile
         velocity = vec3( Cos(direction) * this.speed,
                         Sin(direction) * this.speed,
                         zVelocity )
+
+        if pitchEnabled
+            let angle = Atan( velocity.z / this.speed )
+            missileSfx.setPitch(-angle*Cos(direction))
+            missileSfx.setYaw(angle*Sin(direction))
             
         missileSfx.setRoll( direction )
 
@@ -179,7 +184,7 @@ public class Missile
 
 
         if arcEnabled
-            let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
+            let remainingDistance = pos.distanceTo2d(targetPos.toVec2())
 
             if speed >= remainingDistance
                 //stopTimedLoop()
@@ -285,6 +290,9 @@ public class Missile
 
     function getEffect() returns effect
         return null
+
+    function getTargetUnit() returns unit
+        return targetUnit
 
             
     

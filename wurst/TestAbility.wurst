@@ -17,7 +17,7 @@ public let TESTABILITY_UNIT = compiletime( ABIL_ID_GEN.next() )
 init
     registerSpellEffectEvent( TESTABILITY_POINT ) ->
         let target = vec2( GetSpellTargetX(), GetSpellTargetY() ).withTerrainZ()
-        let origin = GetSpellAbilityUnit().getPos3with(50)
+        let origin = GetSpellAbilityUnit().getPos().withTerrainZ(75)
         let caster = GetSpellAbilityUnit()
         
         let direction = origin.angleTo2d(target)
@@ -30,7 +30,7 @@ init
         //     flashEffect( Abilities.zigguratMissile, u, "chest")
         //     caster.damageTarget(u, 50)
 
-        new Missile(origin, Abilities.mortarMissile)
+        new Missile(origin, Abilities.ballistaMissile)
         ..firePoint(target, 900, 0)
         //..fireLine(target, 700, 1000)
         
