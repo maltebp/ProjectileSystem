@@ -7,6 +7,7 @@ import Missile
 import Assets
 import CustomProjectile
 import MyMissile
+import LinkedList
 
 
 public let TESTABILITY_POINT = compiletime( ABIL_ID_GEN.next() )
@@ -37,9 +38,38 @@ init
 
     registerSpellEffectEvent( TESTABILITY_UNIT ) ->
         let target = GetSpellTargetUnit()
+        let caster = GetSpellAbilityUnit()
         let origin = GetSpellAbilityUnit().getPos3with(0)
         
-        //let missile = new Missile( target, 50, origin, true, Abilities.wyvernSpearMissile, 500, 1 )
+        int count = 0
+
+        let hitTargets = new LinkedList<unit>
+        ..add(target)
+
+        let missile = new Missile(origin + vec3(0,0,75), Abilities.glaiveMissile)
+        ..fireUnit(target, 75, true, 800, 0)
+        
+        missile.addActionOnFinish() ->
+            count++
+            if count <= 2
+
+                print("should find target")
+
+                let targets = ENUM_GROUP..enumUnitsInRange(target.getPos(), 500)
+                
+                for t from targets
+                    print("checking target")
+                    if t.isAlive() and not hitTargets.has(t)
+                        print("found target")
+                        missile.fireUnit(t, 50, true, 800, 0)
+                        hitTargets.add(t)
+                        break
+                
+                targets.clear()
+                    
+            else
+                destroy hitTargets
+            
 
 
 @compiletime

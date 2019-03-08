@@ -68,11 +68,42 @@ public class Missile
     construct( vec3 originPos )
         pos = originPos
 
+    
+
+
+    function firePoint( vec3 targetPos, real speed, real arc )
+        initialize( targetPos, speed, arc)
+
+        if not arcEnabled
+            doAfter( originPos.distanceTo(targetPos)/speed ) ->
+                finish()
+        
+
+    function fireLine( vec3 targetPos, real distance, real speed )
+        initialize( targetPos, speed, 0 )
+        
+
+        doAfter( distance/speed ) ->
+            finish()
+
+
+
+    function fireUnit(unit targetUnit, real targetZOffset, boolean homing, real speed, real arc)
+        initialize( targetUnit.getPos3Real(), speed, arc)
+
+        homingEnabled = homing
+
+        this.targetUnit = targetUnit
+        this.targetZOffset = targetZOffset
+
+
     /**   */
     private function initialize( vec3 targetPos, real speed, real arc )
         this.targetPos = targetPos
         this.speed = speed * ANIMATION_PERIOD
         this.direction = pos.angleTo2d(targetPos).radians()
+
+        finished = false
 
         arcEnabled = arc > 0
 
@@ -86,38 +117,13 @@ public class Missile
 
 
 
-    function firePoint( vec3 targetPos, real speed, real arc )
-        initialize( targetPos, speed, arc)
-
-        let missile = this
-
-        if not arcEnabled
-            doAfter( originPos.distanceTo(targetPos)/speed ) ->
-                //missile.stopTimedLoopAndDestroy()
-                finish()
-        
-
-    function fireLine( vec3 targetPos, real distance, real speed )
-        initialize( targetPos, speed, 0 )
-    
-        let missile = this
-
-        doAfter( distance/speed ) ->
-            print("destroy")
-            finish()
-
-
-    function fireUnit(unit targetUnit, real targetZOffset, boolean homing, real speed, real arc)
-        initialize( targetUnit.getPos3Real(), speed, arc)
-
-        homingEnabled = homing
-
-        this.targetUnit = targetUnit
-        this.targetZOffset = targetZOffset
-
-
 
     ondestroy
+        if actionsOnFinish != null
+            for actionOnFinish in actionsOnFinish
+                destroy actionOnFinish
+            destroy actionsOnFinish
+
         missileSfx.destr()
     
 
@@ -135,6 +141,12 @@ public class Missile
             this.velocity.y = Sin(this.direction) * this.speed
 
             this.missileSfx.setRoll(this.direction)
+            let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
+
+            if speed >= remainingDistance
+                //stopTimedLoop()
+                finish()
+                return
 
 
         if arcEnabled
@@ -164,7 +176,6 @@ public class Missile
 
         if action_postUpdate != null
             action_postUpdate.run()
-
 
 
     function addCollisionAction( real range, boolean collideOnce, ProjectileFilter filter, MissileUnitAction action )      
@@ -210,12 +221,9 @@ public class Missile
         if actionsOnFinish != null
             for action in actionsOnFinish
                 action.run()
-                destroy action
-
-            destroy actionsOnFinish
-
 
         if destroyOnFinish and finished
+            
             destroy this
 
         
@@ -244,6 +252,7 @@ public class Missile
 
     function getEffect() returns effect
         return null
+
             
     
     
