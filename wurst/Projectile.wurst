@@ -195,7 +195,6 @@ public class Projectile
 
     
         // Start Update
-        print("Starting new update")
         updateCallback = doPeriodically(updateFreq) cb ->
             if( not shouldStop )
                 update()    
@@ -247,7 +246,6 @@ public class Projectile
                 projectileSfx.setYaw(angle*Sin(direction))
             
             
-            
         // Update position
         pos += velocity
         projectileSfx.setPos(pos)
@@ -270,11 +268,9 @@ public class Projectile
     private function finish()
         
         // Stopping update
-        print("Finished",10)
         if( updateCallback != null )
             destroy updateCallback
             updateCallback = null
-            print("Destroyed callback",10)
 
         shouldStop = destroyOnFinish
 
@@ -282,7 +278,7 @@ public class Projectile
             for action in actionsOnFinish
                 action.run()
 
-        if shouldStop
+        if( shouldStop )
             destroy this
 
 
