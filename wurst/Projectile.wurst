@@ -4,7 +4,6 @@ package Projectile
 
 //=============================================================================================================================================
 
-import TimerUtils
 import LinkedList
 import ClosureTimers
 
@@ -30,6 +29,7 @@ public class Projectile
     private vec3 velocity // Directed speed
     private real speed // Total speed
     private real direction
+    
 
     private vec3 targetPos
     private unit targetUnit = null
@@ -46,18 +46,20 @@ public class Projectile
     private boolean homingEnabled   = false
 
     // Remote Functions
-    private ProjectileFilter<unit>      collisionFilter = null
+    private ProjectileUnitFilter    collisionFilter = null
+    private ProjectileUnitAction    collisionAction = null
+    
     private LinkedList<ProjectileAction>   actionsOnFinish = null
     private ProjectileAction               action_preUpdate = null
-    private ProjectileAction               action_postUpdate = null
 
+    private var collisionRange = 0.
+    private var collideOnce = true
     private group collidedUnits = null
 
-    // For updating
-    private static let instances = new LinkedList<thistype>
-    private static let updateTimer = getTimer()
+    // Using temp group, since someone else might be using enum group
+    private static group tempGroup = CreateGroup()
 
-    private real updateFreq = 0
+    private real updateFreq = ANIMATION_PERIOD
     private CallbackPeriodic updateCallback = null
     private CallbackSingle timedLifeCallback = null 
 
@@ -101,23 +103,24 @@ public class Projectile
             arc:        The arc of the projectile. Same factor as original WC3 projectiles (not radians nor degrees).
     */
     function firePoint( vec3 targetPos, real speed, real arc )
-        initialize( targetPos, speed, arc)
-        if not arcEnabled
-            timedLifeCallback = doAfter( pos.distanceTo2d(targetPos)/speed ) ->
-                finish()
+        initialize( targetPos, speed, arc )
+        // if not arcEnabled
+        //     timedLifeCallback = doAfter( pos.distanceTo2d(targetPos)/speed ) ->
+        //         finish()
         
 
-    /**
-        Fires the projectile towards a point but for a set distance. Use addCollisionAction() and addCollisionFilter() to add
-        collision detection and effect.
-            targetPos:  The target point to fire towards (may not necessarily hit this point)
-            distance:   A specific distance the projectile will travel
-            speed:      The speed of the projectile (range per second). Same factor as original WC3 projectile.
-    */
-    function fireLine( vec3 targetPos, real distance, real speed )
-        initialize( targetPos, speed, 0 )
-        timedLifeCallback = doAfter( distance/speed ) ->
-            finish()
+    // TODO: Implement this
+    // /**
+    //     Fires the projectile towards a point but for a set distance. Use addCollisionAction() and addCollisionFilter() to add
+    //     collision detection and effect.
+    //         targetPos:  The target point to fire towards (may not necessarily hit this point)
+    //         distance:   A specific distance the projectile will travel
+    //         speed:      The speed of the projectile (range per second). Same factor as original WC3 projectile.
+    // */
+    // function fireLine( vec3 targetPos, real distance, real speed )
+    //     initialize( targetPos, speed, 0 )
+    //     // timedLifeCallback = doAfter( distance/speed ) ->
+    //     //     finish()
 
     /**
         Stop the projectile before it was actually meant to (i.e. before it has reached its end point).
@@ -126,7 +129,36 @@ public class Projectile
         shouldStop = true
         
 
-    
+    //------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    ondestroy
+
+        if( updateCallback != null )
+            destroy updateCallback
+
+        if( timedLifeCallback != null )
+            destroy timedLifeCallback
+
+        if actionsOnFinish != null
+            for actionOnFinish in actionsOnFinish
+                destroy actionOnFinish
+            destroy actionsOnFinish
+
+        if collisionFilter != null
+            destroy collisionFilter
+
+        if collisionAction != null
+            destroy collisionAction
+
+        if collidedUnits != null
+            collidedUnits.destr()
+
+        projectileSfx
+        ..setYaw(0)
+        ..setPitch(0)
+        ..destr()
+
+
     /* Initializes the projectile with some generic things, such as calculating a starting velocity,
         the actual speed (range per ANIMATION_PERIOD) etc.
     */
@@ -140,7 +172,7 @@ public class Projectile
 
         real zVelocity
 
-        if arcEnabled
+        if( arcEnabled )
             // this.speed*4*arc is the adjustment which gives it the WC3 like arc
             zVelocity = this.speed*4*arc  
            
@@ -161,30 +193,14 @@ public class Projectile
             
         projectileSfx.setRoll( direction )
 
-        startUpdate()
+    
+        // Start Update
+        print("Starting new update")
+        updateCallback = doPeriodically(updateFreq) cb ->
+            if( not shouldStop )
+                update()    
 
-    ondestroy
-        if( timedLifeCallback != null )
-            destroy timedLifeCallback
-
-        if actionsOnFinish != null
-            for actionOnFinish in actionsOnFinish
-                destroy actionOnFinish
-            destroy actionsOnFinish
-
-        if collisionFilter != null
-            destroy collisionFilter
-
-        if action_postUpdate != null
-            destroy action_postUpdate
-
-        if collidedUnits != null
-            collidedUnits.destr()
-
-        projectileSfx
-        ..setYaw(0)
-        ..setPitch(0)
-        ..destr()
+        
 
 
     protected function update()
@@ -193,8 +209,12 @@ public class Projectile
 
         // The method is split into different sections in order to optimize the run speed.
         
+        let remainingDistance = pos.distanceTo2d(targetPos.toVec2())
+        if speed >= remainingDistance
+            finish()
+            return
+
         if homingEnabled
-            let remainingDistance = pos.toVec2().distanceTo(targetPos.toVec2())
             let remainingTime = remainingDistance / speed
 
             this.targetPos = this.targetUnit.getPos().withTerrainZ(targetZOffset)
@@ -214,69 +234,55 @@ public class Projectile
                 projectileSfx.setPitch(-angle*Cos(direction))
                 projectileSfx.setYaw(angle*Sin(direction))
 
-            if speed >= remainingDistance
-                finish()
-                return
-
         if arcEnabled
-            let remainingDistance = pos.distanceTo2d(targetPos.toVec2())
+            let heightDif =  targetPos.z - pos.z
+            let time = remainingDistance / speed
+            let gravity = (2 / time) * (heightDif / time - velocity.z)
 
-            if speed >= remainingDistance
-                finish()
-                return
+            velocity.z += gravity
 
-            else
-                let heightDif =  targetPos.z - pos.z
-                let time = remainingDistance / speed
-                let gravity = (2 / time) * (heightDif / time - velocity.z)
-
-                velocity.z += gravity
-
-                if pitchEnabled
-                    let angle = Atan( velocity.z / speed )
-                    projectileSfx.setPitch(-angle*Cos(direction))
-                    projectileSfx.setYaw(angle*Sin(direction))
+            if pitchEnabled
+                let angle = Atan( velocity.z / speed )
+                projectileSfx.setPitch(-angle*Cos(direction))
+                projectileSfx.setYaw(angle*Sin(direction))
+            
+            
             
         // Update position
         pos += velocity
         projectileSfx.setPos(pos)
 
-        if action_postUpdate != null
-            action_postUpdate.run()
+        // Check collision
+        if( collisionAction != null )
+            tempGroup..clear()..enumUnitsInRange( pos.toVec2(), collisionRange )
+            
+            for target from tempGroup
+                if( shouldStop )
+                    finish()
+                    return
+                if( (not collideOnce or not collidedUnits.contains(target)) and (collisionFilter == null or collisionFilter.filter(target)) )
+                    collidedUnits.addUnit(target)
+                    collisionAction.run(target)
 
 
 
-    private function startUpdate()
-        if updateFreq > 0 // Checking for custom update freq
-            updateCallback = doPeriodically( updateFreq ) cb ->
-                this.update()
-        else
-            instances.add(this)
-            if instances.size() == 1
-                updateTimer.startPeriodic( ANIMATION_PERIOD ) ->
-                    for instance in instances
-                        instance.update()
 
-
-    private function stopUpdate()
-        if updateCallback != null
-            destroy updateCallback
-        else
-            instances.remove(this)
-            if instances.size() == 0
-                updateTimer.pause()
-
-    
     private function finish()
-        finished = true
+        
+        // Stopping update
+        print("Finished",10)
+        if( updateCallback != null )
+            destroy updateCallback
+            updateCallback = null
+            print("Destroyed callback",10)
 
-        stopUpdate()
+        shouldStop = destroyOnFinish
 
         if actionsOnFinish != null
             for action in actionsOnFinish
                 action.run()
 
-        if destroyOnFinish and finished
+        if shouldStop
             destroy this
 
 
@@ -290,6 +296,7 @@ public class Projectile
         actionsOnFinish.add(action)
 
 
+
     /**
         Activate collision detection for the projectile, and run custom action. To add a filter, use the setCollisionFilter() method.
         You may also just do the filtering within the action you're implementing. 
@@ -297,22 +304,15 @@ public class Projectile
             range:          The range at which to detect units
             collideOnce:    False will make it collide with the unit every ANIMATION_PERIOD (~0.03 seconds)
             action:         The action to run once a target is hit */
-    function addCollisionAction( real range, boolean collideOnce, ProjectileUnitAction action )
-        
+    function setCollisionAction( real range, boolean collideOnce, ProjectileUnitAction action )
 
-        if collideOnce and collidedUnits == null
+        // Setup collision group
+        if( collideOnce and collidedUnits == null )
             collidedUnits = CreateGroup()
 
-        action_postUpdate = ->
-            let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
-                    
-            for target from targets
-                if( this.shouldStop )
-                    break
-                if( (not collideOnce or not collidedUnits.contains(target)) and (this.collisionFilter != null or this.collisionFilter.filter(target)) )
-                    collidedUnits.addUnit(target)
-                    action.run(target)
-                    
+        collisionAction = action
+        collisionRange = range
+        this.collideOnce = collideOnce                   
                 
 
 
@@ -322,8 +322,8 @@ public class Projectile
             collideOnce:    False will make it collide with the unit every ANIMATION_PERIOD (~0.03 seconds)
             action:         The action to run once a target is hit
     */    
-    function setCollisionFilter( ProjectileFilter<unit> filter )
-        this.collisionFilter = filter
+    function setCollisionFilter( ProjectileUnitFilter collisionFilter )
+        this.collisionFilter = collisionFilter
 
     
     /**
@@ -387,7 +387,7 @@ public interface ProjectileAction
 public interface ProjectileUnitAction
     function run(unit target)
     
-public interface ProjectileFilter<T>
-    function filter( T filterParam ) returns boolean
+public interface ProjectileUnitFilter
+    function filter(unit u) returns boolean
     
     

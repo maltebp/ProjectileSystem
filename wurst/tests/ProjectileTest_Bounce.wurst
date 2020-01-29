@@ -1,0 +1,74 @@
+package ProjectileTest_Bounce
+import AbilityObjEditing
+import ObjectIdGenerator
+import Icons
+import RegisterEvents
+import LinkedList
+import Projectile
+import Abilities
+
+
+
+public let TESTABILITY_UNIT = compiletime( ABIL_ID_GEN.next() )
+
+
+//================================================================================================================================================================================================
+
+init
+    registerSpellEffectEvent( TESTABILITY_UNIT ) ->
+        let target = GetSpellTargetUnit()
+        let origin = GetSpellAbilityUnit().getPos3with(0)
+        
+        let hitTargets = new LinkedList<unit>
+        ..add(target)
+
+        let missile = new BouncingProjectile(origin + vec3(0,0,75), Abilities.glaiveMissile)
+        ..destroyOnFinish(false)
+        ..fireUnit(target, 75, true, 800, 0)
+        
+        missile.addActionOnFinish() ->
+            missile.jumpCount++
+            if missile.jumpCount <= 2
+
+                let targets = ENUM_GROUP..enumUnitsInRange(target.getPos(), 500)
+                
+                for t from targets
+                    if t.isAlive() and not hitTargets.has(t)
+                        missile.fireUnit(t, 50, true, 800, 0)
+                        hitTargets.add(t)
+                        break
+
+                targets.clear()
+            
+            else
+                missile.stop()
+                destroy hitTargets
+            
+
+class BouncingProjectile extends Projectile
+    
+    var jumpCount = 0
+    
+    construct( vec3 originPos, string sfxPath )
+        super(originPos, sfxPath)
+
+    
+
+
+//================================================================================================================================================================================================
+@compiletime
+function defineAbility()
+    new AbilityDefinitionFingerofDeath(TESTABILITY_UNIT)
+    ..setHeroAbility(false)
+    ..setArtTarget("")
+    ..setLightningEffects("")
+    ..setAnimationNames("attack")
+    ..setMissileArt("")
+    ..setTargetsAllowed(1, "ground,hero,nonhero")
+    ..setCastRange(1, 10000)
+    ..setManaCost(1, 0)
+    ..setCooldown(1, 0)
+    ..setName("Missile")
+    ..setTooltipNormal(1, "Single Target")
+    ..setDamage(1, 0)
+    ..setIconNormal(Icons.bTNFlare)
