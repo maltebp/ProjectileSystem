@@ -58,6 +58,7 @@ public class Projectile
 
     private real updateFreq = 0
     private CallbackPeriodic updateCallback = null
+    private CallbackSingle timedLifeCallback = null 
 
 
     // ===============================================================
@@ -101,7 +102,7 @@ public class Projectile
     function firePoint( vec3 targetPos, real speed, real arc )
         initialize( targetPos, speed, arc)
         if not arcEnabled
-            doAfter( pos.distanceTo2d(targetPos)/speed ) ->
+            timedLifeCallback = doAfter( pos.distanceTo2d(targetPos)/speed ) ->
                 finish()
         
 
@@ -114,7 +115,7 @@ public class Projectile
     */
     function fireLine( vec3 targetPos, real distance, real speed )
         initialize( targetPos, speed, 0 )
-        doAfter( distance/speed ) ->
+        timedLifeCallback = doAfter( distance/speed ) ->
             finish()
 
     
@@ -155,6 +156,9 @@ public class Projectile
         startUpdate()
 
     ondestroy
+        if( timedLifeCallback != null )
+            destroy timedLifeCallback
+
         if actionsOnFinish != null
             for actionOnFinish in actionsOnFinish
                 destroy actionOnFinish
