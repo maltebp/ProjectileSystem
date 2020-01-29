@@ -196,13 +196,16 @@ public class Projectile
     
         // Start Update
         updateCallback = doPeriodically(updateFreq) cb ->
-            if( not shouldStop )
+            if( shouldStop )
+                finish()
+            else
                 update()    
 
         
 
 
     protected function update()
+
         if action_preUpdate != null
             action_preUpdate.run()
 
@@ -266,7 +269,6 @@ public class Projectile
 
 
     private function finish()
-        
         // Stopping update
         if( updateCallback != null )
             destroy updateCallback
@@ -278,6 +280,9 @@ public class Projectile
             for action in actionsOnFinish
                 action.run()
 
+        /* An actionOnFinish action might tell it to stop,
+            even though its set to not destroy on finish.
+            therefor wecheck it here again. */
         if( shouldStop )
             destroy this
 
