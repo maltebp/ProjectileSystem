@@ -36,8 +36,9 @@ public class Projectile
     private real targetZOffset = 0
      
     // Toggleable
-    private boolean pitchEnabled    = true
-    private boolean destroyOnFinish = true
+    private var pitchEnabled    = true
+    private var destroyOnFinish = true
+    private var shouldStop = false
 
     // Other bools
     private boolean finished        = false
@@ -117,6 +118,13 @@ public class Projectile
         initialize( targetPos, speed, 0 )
         timedLifeCallback = doAfter( distance/speed ) ->
             finish()
+
+    /**
+        Stop the projectile before it was actually meant to (i.e. before it has reached its end point).
+        Use this instead of 'destroy' if you want to stop the projectile preemptively. */
+    function stop()
+        shouldStop = true
+        
 
     
     /* Initializes the projectile with some generic things, such as calculating a starting velocity,
@@ -299,9 +307,12 @@ public class Projectile
             let targets = ENUM_GROUP..enumUnitsInRange( this.pos.toVec2(), range )
                     
             for target from targets
-                if (not collideOnce or not collidedUnits.contains(target)) and (this.collisionFilter == null or this.collisionFilter.filter(target))
-                    action.run(target)
+                if( this.shouldStop )
+                    break
+                if( (not collideOnce or not collidedUnits.contains(target)) and (this.collisionFilter != null or this.collisionFilter.filter(target)) )
                     collidedUnits.addUnit(target)
+                    action.run(target)
+                    
                 
 
 
