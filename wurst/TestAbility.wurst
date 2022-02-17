@@ -5,9 +5,6 @@ import ObjectIdGenerator
 import RegisterEvents
 import Projectile
 import Assets
-import CustomProjectile
-import MyMissile
-import LinkedList
 
 
 public let TESTABILITY_POINT = compiletime( ABIL_ID_GEN.next() )
@@ -24,11 +21,7 @@ init
         var updateNumber = 0
 
         new Projectile(origin, Abilities.ballistaMissile)
-        ..firePoint(target, 900, 0)
-        
-        
-
-    
+        ..firePoint(target, 900, 0)   
 
 
 @compiletime

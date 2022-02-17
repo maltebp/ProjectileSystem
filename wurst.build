@@ -1,5 +1,7 @@
 ---
 projectName: MissileSystem
+dependencies:
+- https://github.com/wurstscript/wurstStdlib2
 buildMapData:
   name: DefaultName
   fileName: DefaultFileName
